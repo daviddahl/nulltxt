@@ -1,0 +1,65 @@
+nulltxt: a sparse messaging client and server
+---------------------------------------------
+
+GREAT IDEAS
+-----------
+
+1. Each message is 2 distinct encrypted messages: 'who from & subject' AND 'message content'
+
+2. Build the API FOR THIS APP on top of existing DC extension, perhaps adding new typedArray data as results instead of base64 encoded strings
+
+3. Build nulltxt as a demo page for now that excersizes each front end bit. Worry about the protocol & REST later
+
+4. Multiple endpoints: a whitelist invite will provide you with a list of potential endpoints to POST messages to.
+
+5. postMessage -> iframe delivery instead of HTTP?? RESEARCH. This appears to work.  
+
+6. iframe(s) for incoming messages
+
+7. iframe(s) for outgoing messages
+
+8. Use Persona login for each incoming iframe? RESEARCH
+
+Features
+========
+
+Server:
+* minimal features
+** Utilizes BrowserID to handle login
+** Initial login user creates a (psuedo-anonymous) 'handle'
+*** A 'message pad' is created for the user: 
+**** a homepage for messages: nulltxt.se/pad/jacque-cousteau
+*** visit a friend's pad to collect their public key
+** Back-end database: Postgres/HBase
+*** Schema
+**** database 'nulltxt'
+**** table 'message': pid, hashed_identifier, message_content, self_destruct_time
+***** message_content is JSON: {from: hashed_id, date: 20120723000000, content: '<RSA-AES-CRYPTO-MESSAGE>', iv: 1234567, pubkey: <PUBKEY>, wrapped_key: <WRAPPED-AES-SYM-KEY>, signature: <message signature>}
+**** table acl: owner_hash, correspondent_hash, correspondence_allowed
+***** ACL can be toggled from correspondent's message pad 
+**** table: 'user': 'handle', 'hashed_identifier', 'bio', 'self_destruct_time'
+** Data Expiration
+*** server deletes messages after a week?
+*** server deletes accounts after a year?
+*** self-destruct override
+** After message download, server-side message is deleted
+** CSP, header security, no external scripts allowed, etc.
+** Messages are limited to 4096 char, text-only to begin
+** WHITELIST: by default, the first message received from a correspondant requires approval 
+ 
+Client:
+* minimal features
+** IndexedDB storage of crypto-blobs
+** decrypt to read each message, no plain text indexing at first
+** Reply functionality
+** all messages are signed
+** addressing: human-written: '@jacque-cousteau @natasha @deezthugs'
+*** client converts it to JSON: '[SHA2-HASH: {MSG}, SHA2-HASH: {MSG}, SHA2-HASH: {MSG}]' 
+** contacts table stored in IndexedDB or localStorage, indexes user id hashes to usernames
+** Most data is stored in the client, as little as possible on the server.
+*** the server data is limited to 
+
+ISSUES:
+Cross-domain messaging
+Federation
+Plain-text indexing/search

@@ -1,0 +1,23 @@
+body {
+    font-family: "Arial","Helvetica",sans-serif;
+    font-size: 13px;
+    color: rgb(71, 71, 71);
+}
+
+select#inbox { width: 50%; height: 50%;} 
+div#read-msg { font-size: 15px; }
+
+#compose { width: 90%; height:80%; }
+textarea#compose-message { width: 75%; height: 40%; }
+
+#console { font-family: monospace; 
+           font-size: 12px; 
+           color: green; 
+           background-color: black;
+           width: 400px;
+           height: 100px;
+           overflow: scroll; }
+#console.console-error { color: red;  }
+#console.console-warn { color: orange;  }
+
+#settings-list {   }
