@@ -23,6 +23,11 @@ $(document).ready(function (){
   // SETTINGS
   $("#main-focus-settings").click(function (evt){
     $(".top-view").hide();
+    // load the settings into the view:
+    $("#handle")[0].value = nulltxt.settings.handle;
+    $("#incoming-url")[0].value = nulltxt.settings.incomingURL;
+    $("#outgoing-url")[0].value = nulltxt.settings.outgoingURL;
+    $("#api-key")[0].value = nulltxt.settings.apiKey;
     $("#settings-view").show();
   });
 
@@ -77,13 +82,12 @@ var STATUS_ERR = 2;
 
 function receiveMsg(aEvt)
 {
-  // aEvt.source.postMessage("index page rcvd message...", NULLTXT_URL);
+  log("INCOMING MESSAGE: nulltxt-index");
   log("nulltxt data: " + aEvt.data);
   log("nulltxt source: " + aEvt.source);
   log("nulltxt origin: " + aEvt.origin);
-  var msg = aEvt.data; // JSON.parse(aEvt.data);
-  log("msg");
-  log(msg);
+  var msg = JSON.parse(aEvt.data); // JSON.parse(aEvt.data);
+  log("nulltxt data as object: " + msg);
   if (msg) {
     if (msg.operation) {
       switch(msg.operation) {
@@ -101,8 +105,9 @@ function receiveMsg(aEvt)
         log("handle metadata");
         nulltxt.handleContactMetaData(msg);
         break;
-      case "messages-available-response":
-        nulltxt.handleIncomingMessages(msg);
+      case "fetch-msgs-response":
+        nulltxt.console.log("fetch msgs response: " + msg);
+        nulltxt.handleIncomingMessages(JSON.parse(msg.msgs));
         break;
       default:
         break;
@@ -114,63 +119,98 @@ function receiveMsg(aEvt)
   }
 }
 
-var nulltxt = {
+function NullTxt(){
+  var settings = localStorage.getItem("settings");
+  if (!settings) {
+    this.console.warn("settings are null");
+    this.init();
+  }
+  else {
+    this._settings = JSON.parse(settings);
+    this.console.log("settings are loaded");
+  }
+}
+
+NullTxt.prototype = {
+  init: function idx_init()
+  {
+    var _settings = { handle: "",
+                      incomingURL: "comm.html",
+                      outgoingURL: "comm.html",
+                      apiKey: "123456789-09876-09876-1234"
+                    };
+    var settings = JSON.stringify(_settings);
+    localStorage.setItem("settings", settings);
+    this.console.log("settings created.");
+    this._settings = _settings;
+  },
+
   loadFrame: function idx_loadFrame(aURL)
   {
     $("#outer-frame").children().remove();
-    var frameHtml = '<iframe id="comm-frame" src="' + aURL + '" width="200" height="1000"><p>Your browser does not support iframes.</p></iframe>';
+    var frameHtml = '<iframe id="comm-frame" src="' + aURL + '" width="10" height="10"><p>Your browser does not support iframes.</p></iframe>';
     $("#outer-frame").append(frameHtml);
     // XXX: need to listen for load event to set 'messagingReady'
   },
 
-  loadOutgoingFrame: function idx_loadOutFrame(aURL)
+  loadOutgoingFrame: function idx_loadOutFrame(aURL, aCallback)
   {
     $("#comm-frame-out").children().remove();
     var frameHtml = '<iframe id="comm-frame-outgoing" src="' +
       aURL +
       '" width="200" height="1000"><p>Your browser does not support iframes.</p></iframe>';
     $("#comm-frame-out").append(frameHtml);
-    // XXX: need to listen for load event to set 'messagingReady'
+
+    console.log("Attaching outcoming comm frame, adding load event handler");
+    $("#comm-frame-outgoing").load(aCallback);
   },
 
-  loadIncomingFrame: function idx_loadIncomingFrame(aURL)
+  loadIncomingFrame: function idx_loadIncomingFrame(aURL, aCallback)
   {
     $("#comm-frame-in").children().remove();
     var frameHtml = '<iframe id="comm-frame-incoming" src="' +
       aURL +
       '" width="200" height="1000"><p>Your browser does not support iframes.</p></iframe>';
     $("#comm-frame-in").append(frameHtml);
+    console.log("Attaching incoming comm frame, adding load event handler");
+    $("#comm-frame-incoming").load(aCallback);
   },
 
   get settings() {
-    if (this._settings) {
-      return this._settings;
+    // Settings are stored in localStorage
+    // handle, incomingURL, outgoingURL, apiKey
+    // endpoints: { incoming: [{}],  outgoing: [{}] } // XXX: add support for multiple endpoints
+    var test = localStorage.getItem("settings");
+    if (test) {
+      var settingsObj = JSON.parse(test);
+      this._settings = settingsObj;
+      return settingsObj;
     }
-    localStorage.setItem("settings", JSON.stringify({}));
-    this._settings = JSON.parse(localStorage.getItem("settings"));
-    return this._settings;
+    else {
+      throw new Error("Error: Settings are null");
+    }
   },
-
-  _settings: null,
 
   settingsConfig: {
     handle: "handle",
-    "incoming-url": "incoming-url",
-    "outgoing-url": "outgoing-url"
+    incomingURL: "incomingURL",
+    outgoingURL: "outgoingURL",
+    apiKey: "apiKey"
   },
 
   settingsSave: function idx_settingsSave()
   {
     var updateObj = {
       handle: $("#handle")[0].value,
-      "incoming-url": $("#incoming-url")[0].value,
-      "outgoing-url": $("#outgoing-url")[0].value
+      incomingURL: $("#incoming-url")[0].value,
+      outgoingURL: $("#outgoing-url")[0].value,
+      apiKey: $("#api-key")[0].value
     };
 
     var settings = this.settings;
     var updateRequired = false;
     for (var prop in updateObj) {
-      if (prop in settingsConfig) {
+      if (prop in this.settingsConfig) {
         this._settings[prop] = updateObj[prop];
         updateRequired = true;
       }
@@ -178,7 +218,9 @@ var nulltxt = {
         this.console.warn("Settings: " + prop + " not a valid setting property.");
       }
     }
-    localStorage.setItem("settings", JSON.stringify(settings));
+    if (updateRequired) {
+      localStorage.setItem("settings", JSON.stringify(this._settings));
+    }
   },
 
   getContactMetaData: function idx_getContactMetaData()
@@ -194,6 +236,7 @@ var nulltxt = {
     log("sending message: " + aMsgID);
     log("message: " + aMsg);
     try {
+      // XXX: change the NULLTXT_URL to document.location? or the origin?
       $("#comm-frame-outgoing")[0].contentWindow.postMessage(aMsg, NULLTXT_URL);
     }
     catch (ex) {
@@ -207,12 +250,21 @@ var nulltxt = {
   fetchMsgs: function idx_fetchMsgs()
   {
     // fetch messages via the iframe
-    if (settings["incoming-url"]) {
-      this._currentIncomingURL = settings["incoming-url"];
+    if (this.settings.incomingURL) {
+      this._currentIncomingURL = this.settings.incomingURL;
     }
-    this.loadIncomingFrame(this._currentIncomingURL);
-    // XXX: load event handler to actually fetch the messages
-    this.incomingCommFrame.postMessage(JSON.stringify({ operation: "fetch-msgs"}), NULLTXT_URL);
+    var self = this;
+    function callback()
+    {
+      var msg = JSON.stringify({ operation: "fetch-msgs-request",
+                                 user: self.settings.handle,
+                                 apiKey: self.settings.apiKey
+                               });
+
+      $("#comm-frame-incoming")[0].contentWindow.postMessage(msg, NULLTXT_URL);
+    }
+
+    this.loadIncomingFrame(this._currentIncomingURL, callback);
   },
 
   get incomingCommFrame() {
@@ -220,6 +272,25 @@ var nulltxt = {
   },
 
   _currentIncomingURL: null,
+
+  handleIncomingMessages: function idx_handleIncomingMessages(aMsgs)
+  {
+    for (var idx in aMsgs) {
+      console.log(aMsgs[idx]);
+      // XXX: use IndexedDB instead, can we push storage off onto a worker?
+      // XXX: message ids should be unique
+      // localStorage.setItem("msg-" + aMsgs[idx].id, JSON.stringify(aMsgs[idx]));
+      // XXX: use data attributes for all attrs in each message
+      var msgFormat = '<option id=msg-' +
+                        aMsgs[idx].id  +
+                        '>' +
+                        aMsgs[idx].content +
+                        '</option>';
+        $("#inbox")[0].appendChild($(msgFormat)[0]);
+        self.console.log("Received message " + aMsgs[idx].id + " from " + "XXX"); //
+        // XXX: set domain / path where we are getting this message from
+      }
+  },
 
   _fetchMsgs: function idx_fetchMsgs()
   {
@@ -350,7 +421,8 @@ var nulltxt = {
 
     warn: function _warn(aMsg)
     {
-
+      var html = '<div class="console-warn">' + this.format(aMsg) + '</div>';
+      this._write(html);
     },
 
     _write: function _write(aNode)
@@ -441,3 +513,5 @@ var nulltxt = {
   //
   // XXX: make *all* message sending and recving happen via an iframe
 };
+
+var nulltxt = new NullTxt();
