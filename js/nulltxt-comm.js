@@ -25,18 +25,14 @@ function receiveMsg(aEvt)
 {
   log("INCOMING MESSAGE: nulltxt-comm");
   log("msg: " + aEvt.data);
-  // aEvt.source.postMessage("iframe rcvd message...", NULLTXT_URL);
-  log("data: " + aEvt.data);
   log("source: " + aEvt.source);
-  log(aEvt.source);
   log("origin: " + aEvt.origin);
   // if (aEvt.origin == NULLTXT_URL) {
-
+  // // XXX: Deal with it
   // }
   // else {
   //   throw new Error("Cannot send message, origin verification failed.");
   // }
-  log("comm: recieveMsg: msg ");
   var msg = JSON.parse(aEvt.data);
 
   switch(msg.operation) {
@@ -45,6 +41,7 @@ function receiveMsg(aEvt)
       comm.storeMessage(msg);
     }
     else {
+      // XXX: need to respond back to the calling window with this information
       throw new Error("Message missing message content");
     }
     break;
@@ -64,13 +61,23 @@ function receiveMsg(aEvt)
     if (msg.user && msg.apiKey) {
       comm.fetchIncomingMsgs(msg.user, msg.apiKey, aEvt.source);
     }
-
+  case "send-msgs-request":
+    if (msg.user && msg.apiKey && msg.msgs) {
+      comm.sendOutgoingMsgs(msg, aEvt.source);
+    }
+    break;
+  case "user-lookup-request":
+    if (msg.user) {
+      comm.userLookup(msg, aEvt.source);
+    }
+    break;
   default:
     break;
   }
 }
 
 var comm = {
+
   storeMessage: function comm_storeMessage(aMsgObj)
   {
     if (aMsgObj.content) {
@@ -88,44 +95,55 @@ var comm = {
 
   fetchIncomingMsgs: function comm_getIncomingMsgs(aUser, aApiKey, aWindow)
   {
-        // 1. check to see if recv operation is already underway first
-    if (this._fetching) {
-      return;
-    }
-
-    this._fetching = true;
-    var self = this;
-
     $.ajax({
       type: "GET",
       url: RECV_MSGS_URL,
       dataType: "json"
-      // XXX: add error handler to set _fetching back to false
     }).done(function(msgs) {
-      self._fetching = false;
       console.log(msgs);
       var msg = {
         operation: "fetch-msgs-response",
         status: "success",
         msgs: msgs
       };
-
       aWindow.postMessage(JSON.stringify(msg), NULLTXT_URL);
-
-      // msgs = JSON.parse(new String(msgs));
-      // for (var idx in msgs) {
-        // console.log(msgs[idx]);
-        // XXX: use IndexedDB instead, can we push storage off onto a worker?
-        // localStorage.setItem("msg-" + msgs[idx].id, JSON.stringify(msgs[idx]));
-        // // XXX: use data attributes for all attrs in each message
-        // var msgFormat = '<option id=msg-' + msgs[idx].id  + '>'
-        //                   + msgs[idx].content + '</option>';
-        // $("#inbox")[0].appendChild($(msgFormat)[0]);
-        // self.console.log("Recieved message " + msgs[idx].id + " from " + "XXX"); //
-        // XXX: set domain / path where we are getting this message from
-      /// }
     });
-  }
+  },
 
-  //
+  sendOutgoingMsgs: function comm_sendOutgoingMsgs(aMsg, aWindow)
+  {
+    // xhr the messages to the server
+    $.ajax({
+      type: "POST",
+      url: SEND_MSGS_URL,
+      dataType: "json",
+      data: {
+        msgs: JSON.stringify(aMsg.msgs), // message array - single origin for now
+        user: aMsg.user,
+        apiKey: aMsg.apiKey
+      }
+      // XXX: Need error callback
+    }).done(function(msg) {
+      console.log("send messages response: " + msg);
+      if (msg.status == "success") {
+        var response = {
+          operation: "send-msgs-response",
+          status: "success"
+        };
+      }
+      else {
+        var response = {
+          operation: "send-msgs-response",
+          status: "failure"
+        };
+      }
+      aWindow.postMessage(JSON.stringify(msg), NULLTXT_URL);
+    });
+  },
+
+  userLookup: function comm_userLookup(aReq, aHost)
+  {
+    // aReq.userHandle, aReq.host
+    
+  }
 };

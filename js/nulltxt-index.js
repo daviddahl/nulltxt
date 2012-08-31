@@ -1,5 +1,7 @@
 var NULLTXT_URL = "http://dev.nulltxt.se";
 var RECV_MSGS_URL = "msg/in/";
+var SUCCESS = "success";
+var FAILURE = "failure";
 
 var debug = 1;
 function log(aMsg)
@@ -45,7 +47,10 @@ $(document).ready(function (){
     nulltxt.showComposeUI();
   });
   $("#compose-cancel").click(function (evt){
-    nulltxt.cancelCompose();
+    nulltxt.composeCancel();
+  });
+  $("#compose-send").click(function (evt){
+    nulltxt.composeSend();
   });
 
   // double-click handler:
@@ -109,6 +114,10 @@ function receiveMsg(aEvt)
         nulltxt.console.log("fetch msgs response: " + msg);
         nulltxt.handleIncomingMessages(JSON.parse(msg.msgs));
         break;
+      case "send-msgs-response":
+        nulltxt.console.log("send msgs response: " + msg);
+        nulltxt.handleOutgoingMessagesResponse(JSON.parse(msg.msgs));
+        break;
       default:
         break;
       }
@@ -151,18 +160,6 @@ NullTxt.prototype = {
     var frameHtml = '<iframe id="comm-frame" src="' + aURL + '" width="10" height="10"><p>Your browser does not support iframes.</p></iframe>';
     $("#outer-frame").append(frameHtml);
     // XXX: need to listen for load event to set 'messagingReady'
-  },
-
-  loadOutgoingFrame: function idx_loadOutFrame(aURL, aCallback)
-  {
-    $("#comm-frame-out").children().remove();
-    var frameHtml = '<iframe id="comm-frame-outgoing" src="' +
-      aURL +
-      '" width="200" height="1000"><p>Your browser does not support iframes.</p></iframe>';
-    $("#comm-frame-out").append(frameHtml);
-
-    console.log("Attaching outcoming comm frame, adding load event handler");
-    $("#comm-frame-outgoing").load(aCallback);
   },
 
   loadIncomingFrame: function idx_loadIncomingFrame(aURL, aCallback)
@@ -253,6 +250,10 @@ NullTxt.prototype = {
     if (this.settings.incomingURL) {
       this._currentIncomingURL = this.settings.incomingURL;
     }
+    else {
+      this.console.error("Cannot load incoming frame, check settings to verify incomingURL");
+      return;
+    }
     var self = this;
     function callback()
     {
@@ -265,10 +266,6 @@ NullTxt.prototype = {
     }
 
     this.loadIncomingFrame(this._currentIncomingURL, callback);
-  },
-
-  get incomingCommFrame() {
-    return $("#incoming-url")[0].contentWindow;
   },
 
   _currentIncomingURL: null,
@@ -331,6 +328,73 @@ NullTxt.prototype = {
     });
   },
 
+  /////////////////////////////////////////////////////////////////////////////////
+  // SEND MESSAGES
+  /////////////////////////////////////////////////////////////////////////////////
+
+  _currentOutgoingURL: null,
+
+  loadOutgoingFrame: function idx_loadOutFrame(aURL, aCallback)
+  {
+    $("#comm-frame-out").children().remove();
+    var frameHtml = '<iframe id="comm-frame-outgoing" src="' +
+      aURL +
+      '" width="200" height="1000"><p>Your browser does not support iframes.</p></iframe>';
+    $("#comm-frame-out").append(frameHtml)
+;
+    console.log("Attaching outcoming comm frame, adding load event handler");
+    $("#comm-frame-outgoing").load(aCallback);
+  },
+
+  sendMsgs: function idx_sendMsgs(aMsgs)
+  {
+    // check to see if a send operation is in process
+    if (this._sending) {
+      return;
+    }
+    this._sending = true;
+    // load outgoing frame
+    if (this.settings.outgoingURL) {
+      this._currentOutgoingURL = this.settings.outgoingURL;
+    }
+    else {
+      this.console.error("Cannot load outgoing frame, check settings to verify outgoingURL");
+      return;
+    }
+
+    var self = this;
+    function callback()
+    {
+      var msg = JSON.stringify({ operation: "send-msgs-request",
+                                 user: self.settings.handle,
+                                 apiKey: self.settings.apiKey,
+                                 msgs: aMsgs
+                               });
+
+      $("#comm-frame-outgoing")[0].contentWindow.postMessage(msg, NULLTXT_URL);
+    }
+
+    this.loadOutgoingFrame(this._currentOutgoingURL, callback);
+  },
+
+  handleOutgoingMessagesResponse:
+  function idx_handleOutgoingMessagesResponse(aRsp)
+  {
+    this._sending = false;  // XXX: for now we will just toggle this
+    if (aRsp.status == SUCCESS) {
+      this.console.log("Message sent");
+    }
+    else {
+      this.console.error("Message sending failed");
+    }
+  },
+
+  _sending: false,
+
+  /////////////////////////////////////////////////////////////////////////////////
+  // READ MESSAGES
+  /////////////////////////////////////////////////////////////////////////////////
+
   displayMsg: function displayMsg(aMsgID)
   {
     var msg = JSON.parse(localStorage[aMsgID]);
@@ -351,6 +415,10 @@ NullTxt.prototype = {
     $("#inbox-view").show();
   },
 
+  /////////////////////////////////////////////////////////////////////////////////
+  // COMPOSE
+  /////////////////////////////////////////////////////////////////////////////////
+
   _composing: false,
 
   showComposeUI: function showComposeUI()
@@ -363,7 +431,7 @@ NullTxt.prototype = {
     this._composing = true;
   },
 
-  cancelCompose: function canelCompose()
+  composeCancel: function canelCompose()
   {
     this._composing = false;
     $("#compose-message")[0].value = "";
@@ -371,12 +439,12 @@ NullTxt.prototype = {
     $("#inbox-view").show();
   },
 
-  saveCompose: function saveCompose()
+  composeSave: function saveCompose()
   {
 
   },
 
-  sendCompose: function sendCompose()
+  composeSend: function sendCompose()
   {
     // 1. based on the selected contact(s), we need to load a frame or series of frames
 
@@ -394,6 +462,10 @@ NullTxt.prototype = {
     // close this message compose view
     this.cancelCompose();
   },
+
+  /////////////////////////////////////////////////////////////////////////////////
+  // CONSOLE
+  /////////////////////////////////////////////////////////////////////////////////
 
   console: {
 
@@ -430,6 +502,10 @@ NullTxt.prototype = {
       $("#console").prepend($(aNode));
     }
   },
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // CONTACTS
+  ////////////////////////////////////////////////////////////////////////////////
 
   handleContactMetaData:
   function handleContactMetaData(aMetaData, aSupplementalData)
@@ -497,7 +573,7 @@ NullTxt.prototype = {
 
   // XXX: handle search + add to contacts
 
-  // XXX: load contact/handle's comm page, view details
+  // XXX: User lookup frame : load contact/handle's comm page, view details
 
   // XXX: whitelist handle/endpoint combinations
 
@@ -512,6 +588,10 @@ NullTxt.prototype = {
   //  ... that accept incoming messages for you.
   //
   // XXX: make *all* message sending and recving happen via an iframe
+
+  // XXX: separate INBOX for whitelist requests. allow one per publicKey
+  //      * auto delete these requests so they do not fill up disks
+  //      * treat the whitelist request as less important than a message
 };
 
 var nulltxt = new NullTxt();
