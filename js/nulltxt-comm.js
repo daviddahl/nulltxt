@@ -2,13 +2,17 @@ var NULLTXT_URL = "http://dev.nulltxt.se";
 var MSG_STORE_URL = "msg/store/";
 var RECV_MSGS_URL = "msg/in/";
 var SEND_MSGS_URL = "msg/out/";
+var LOOKUP_USER_URL = "msg/user-lookup/";
 
 var debug = 1;
 function log(aMsg)
 {
   if (debug) {
-    console.log("comm.js...");
-    console.log(aMsg);
+    var msg = [];
+    for (var prop in arguments) {
+      msg.push(arguments[prop]);
+    }
+    console.log("nulltxt-comm: " + msg.join(" "));
   }
 }
 
@@ -141,9 +145,19 @@ var comm = {
     });
   },
 
-  userLookup: function comm_userLookup(aReq, aHost)
-  {
-    // aReq.userHandle, aReq.host
-    
-  }
+  // userLookup: function comm_userLookup(aReq, aHost, aWindow)
+  // {
+  //   // aReq.userHandle, aReq.host
+  //   $.ajax({
+  //     type: "GET",
+  //     url: LOOKUP_USER_URL,
+  //     dataType: "json"
+  //   }).done(function(msgs) {
+  //     console.log(msgs);
+  //     var msg = {
+  //       operation: "fetch-msgs-response",
+  //       status: "success",
+  //       msgs: msgs
+  //     };
+  // }
 };

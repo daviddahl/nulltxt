@@ -7,19 +7,55 @@ var debug = 1;
 function log(aMsg)
 {
   if (debug) {
-    console.log("comm-frame...");
-    console.log(aMsg);
+    var msg = [];
+    for (var prop in arguments) {
+      msg.push(arguments[prop]);
+    }
+    console.log("nulltxt-index: " + msg.join(" "));
   }
 }
 
+var nulltxt;
+
 $(document).ready(function (){
   console.log("document ready...");
+
+  nulltxt = new NullTxt(); // construct the app
+
   // UI tweaking
   $("#read-messages-view").hide();
   $("#compose-view").hide();
+  $("#contact-lookup").hide();
 
   $("#main-focus-fetch-msgs").click(function (evt){
     nulltxt.fetchMsgs();
+  });
+
+  // CONTACTS
+
+  $("#main-focus-contacts").click(function (evt){
+    $(".top-view").hide();
+    $("#contact-lookup-progress").hide();
+    $("#contact-lookup").show();
+    $("#contact-input")[0].focus();
+  });
+
+  $("#contact-lookup-btn").click(function (evt){
+    $("#contact-lookup-progress").show();
+    this.disabled = true;
+    var url = $("#contact-input")[0].value;
+    if (url) {
+      nulltxt.lookupContact(url);
+    }
+  });
+
+  $("#contact-lookup-cancel-btn").click(function (evt){
+    $("#contact-lookup-progress").hide();
+    $("#contact-lookup-btn")[0].disabled = false;
+    $("#contact-input")[0].value = "";
+    // cancel the postMessage
+    $("#contact-lookup").hide();
+    $("#inbox-view").show();
   });
 
   // SETTINGS
@@ -37,6 +73,7 @@ $(document).ready(function (){
 
   $("#settings-close").click(function (evt){
     $("#settings-view").hide();
+    $("#inbox-view").show();
   });
 
   $("#settings-save").click(function (evt){
@@ -167,7 +204,7 @@ NullTxt.prototype = {
     $("#comm-frame-in").children().remove();
     var frameHtml = '<iframe id="comm-frame-incoming" src="' +
       aURL +
-      '" width="200" height="1000"><p>Your browser does not support iframes.</p></iframe>';
+      '" width="10" height="10"><p>Your browser does not support iframes.</p></iframe>';
     $("#comm-frame-in").append(frameHtml);
     console.log("Attaching incoming comm frame, adding load event handler");
     $("#comm-frame-incoming").load(aCallback);
@@ -276,7 +313,7 @@ NullTxt.prototype = {
       console.log(aMsgs[idx]);
       // XXX: use IndexedDB instead, can we push storage off onto a worker?
       // XXX: message ids should be unique
-      // localStorage.setItem("msg-" + aMsgs[idx].id, JSON.stringify(aMsgs[idx]));
+      localStorage.setItem("msg-" + aMsgs[idx].id, JSON.stringify(aMsgs[idx]));
       // XXX: use data attributes for all attrs in each message
       var msgFormat = '<option id=msg-' +
                         aMsgs[idx].id  +
@@ -339,7 +376,7 @@ NullTxt.prototype = {
     $("#comm-frame-out").children().remove();
     var frameHtml = '<iframe id="comm-frame-outgoing" src="' +
       aURL +
-      '" width="200" height="1000"><p>Your browser does not support iframes.</p></iframe>';
+      '" width="10" height="10"><p>Your browser does not support iframes.</p></iframe>';
     $("#comm-frame-out").append(frameHtml)
 ;
     console.log("Attaching outcoming comm frame, adding load event handler");
@@ -397,6 +434,7 @@ NullTxt.prototype = {
 
   displayMsg: function displayMsg(aMsgID)
   {
+    log("aMsgID", aMsgID);
     var msg = JSON.parse(localStorage[aMsgID]);
     if (!msg) {
       console.error("Cannot get message from storage");
@@ -463,49 +501,43 @@ NullTxt.prototype = {
     this.cancelCompose();
   },
 
-  /////////////////////////////////////////////////////////////////////////////////
-  // CONSOLE
-  /////////////////////////////////////////////////////////////////////////////////
+  composeSelectRecipient: function idx_composeSelectRecipient()
+  {
 
-  console: {
-
-    format: function _format(aMsg)
-    {
-      if (typeof aMsg == "string") {
-        return aMsg;
-      }
-      // assume an object: {status: 1, operation: "msg-reception", msg: "whoops!"}
-
-      return "status: " + aMsg.status + " operation: " + aMsg.operation + " msg: " + aMsg.msg;
-    },
-
-    log: function _log(aMsg)
-    {
-      var html = '<div class="console-log">' + this.format(aMsg) + '</div>';
-      this._write(html);
-    },
-
-    error: function _error(aMsg)
-    {
-      var html = '<div class="console-error">' + this.format(aMsg) + '</div>';
-      this._write(html);
-    },
-
-    warn: function _warn(aMsg)
-    {
-      var html = '<div class="console-warn">' + this.format(aMsg) + '</div>';
-      this._write(html);
-    },
-
-    _write: function _write(aNode)
-    {
-      $("#console").prepend($(aNode));
-    }
   },
 
-  ////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////
   // CONTACTS
-  ////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////
+
+  loadContactCommFrame: function idx_loadContactCommFrame(aURL, aCallback)
+  {
+    $("#comm-frame-user").children().remove();
+    var frameHtml = '<iframe id="comm-frame-user-lookup" src="' +
+      aURL +
+      '" width="10" height="10"><p>Your browser does not support iframes.</p></iframe>';
+    $("#comm-frame-user").append(frameHtml);
+    console.log("Attaching user lookup comm frame, adding load event handler");
+    $("#comm-frame-user-lookup").load(aCallback);
+  },
+
+  lookupContact: function idx_lookupContact(aURL)
+  {
+    // Load a lookup iframe and query it for a handle, returning a pubkey+handle or null
+    var self = this;
+    function callback (aResult)
+    {
+      // XXX: set the postMessage here
+    }
+
+    this.loadContactCommFrame(aURL, callback);
+  },
+
+  saveContact: function idx_saveContact(aContact)
+  {
+    // save the contact to *storage
+
+  },
 
   handleContactMetaData:
   function handleContactMetaData(aMetaData, aSupplementalData)
@@ -561,7 +593,50 @@ NullTxt.prototype = {
     this._contacts = JSON.parse(localStorage["contacts"]);
     this.console.log("Created contacts.");
     return this._contacts;
-  }
+  },
+
+
+
+  /////////////////////////////////////////////////////////////////////////////////
+  // CONSOLE
+  /////////////////////////////////////////////////////////////////////////////////
+
+  console: {
+
+    format: function _format(aMsg)
+    {
+      if (typeof aMsg == "string") {
+        return aMsg;
+      }
+      // assume an object: {status: 1, operation: "msg-reception", msg: "whoops!"}
+
+      return "status: " + aMsg.status + " operation: " + aMsg.operation + " msg: " + aMsg.msg;
+    },
+
+    log: function _log(aMsg)
+    {
+      var html = '<div class="console-log">' + this.format(aMsg) + '</div>';
+      this._write(html);
+    },
+
+    error: function _error(aMsg)
+    {
+      var html = '<div class="console-error">' + this.format(aMsg) + '</div>';
+      this._write(html);
+    },
+
+    warn: function _warn(aMsg)
+    {
+      var html = '<div class="console-warn">' + this.format(aMsg) + '</div>';
+      this._write(html);
+    },
+
+    _write: function _write(aNode)
+    {
+      $("#console").prepend($(aNode));
+    }
+  },
+
 
   // XXX: Login routine via Persona
 
@@ -585,7 +660,7 @@ NullTxt.prototype = {
 
   // XXX: updated endpoints notifications
   //  * a message that contains an object that describes additional endpoints
-  //  ... that accept incoming messages for you.
+  //    ... that accept incoming messages for you.
   //
   // XXX: make *all* message sending and recving happen via an iframe
 
@@ -593,5 +668,3 @@ NullTxt.prototype = {
   //      * auto delete these requests so they do not fill up disks
   //      * treat the whitelist request as less important than a message
 };
-
-var nulltxt = new NullTxt();
