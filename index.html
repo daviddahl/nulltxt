@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/style.css">
   <script src="js/jquery.js"></script>
   <script src="js/nulltxt-index.js"></script>
+  <script type="text/javascript" src="js/uri.js"></script>
 </head>
 <body>
 <p>
@@ -33,9 +34,12 @@
 
 <!-- COMPOSE MESSAGE -->
 <div id="compose-view" class="top-view">
-  <textarea cols="80" rows="10" id="compose-message"></textarea>
+  <select id="contacts-list"></select> 
+  <button id="add-contact-message-btn">add contact</button>
   <br />
-  <button id="compose-cancel">cancel</button> 
+  <textarea cols="40" rows="10" id="compose-message"></textarea>
+  <br />
+  <button id="compose-cancel">cancel</button>
   <button id="compose-save">save</button> 
   <button id="compse-send">send</button>
 </div>
@@ -43,12 +47,17 @@
 <!-- CONTACT LOOKUP -->
 <div id="contact-lookup" class="top-view">
   <h2>contact lookup</h2>
+  <!-- <select id="contact-scheme"> -->
+  <!--   <option>https://</option> -->
+  <!--   <option>http://</option> -->
+  <!-- </select> -->
   <input size="30" id="contact-input"/>
   <button id="contact-lookup-btn">lookup</button>
   <button id="contact-lookup-cancel-btn">cancel</button>
   <div id="contact-lookup-progress">
     <img src="img/progress-bar.gif" border="0"/>
   </div>
+  <ul id="contact-lookup-result"></ul>
 </div>
 
 <!-- SETTINGS -->

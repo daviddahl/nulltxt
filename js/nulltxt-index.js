@@ -44,6 +44,7 @@ $(document).ready(function (){
     $("#contact-lookup-progress").show();
     this.disabled = true;
     var url = $("#contact-input")[0].value;
+    log("url: ", url);
     if (url) {
       nulltxt.lookupContact(url);
     }
@@ -53,6 +54,7 @@ $(document).ready(function (){
     $("#contact-lookup-progress").hide();
     $("#contact-lookup-btn")[0].disabled = false;
     $("#contact-input")[0].value = "";
+    $("#contact-lookup-result").children().remove();
     // cancel the postMessage
     $("#contact-lookup").hide();
     $("#inbox-view").show();
@@ -454,6 +456,20 @@ NullTxt.prototype = {
   },
 
   /////////////////////////////////////////////////////////////////////////////////
+  // ADDRESSING
+  /////////////////////////////////////////////////////////////////////////////////
+
+  populateContacts: function idx_populateContacts()
+  {
+    // generate contacts list addresses can be chosen from
+  },
+
+  addressMessage: function idx_addressMessage(aAddress)
+  {
+    //
+  },
+
+  /////////////////////////////////////////////////////////////////////////////////
   // COMPOSE
   /////////////////////////////////////////////////////////////////////////////////
 
@@ -510,33 +526,56 @@ NullTxt.prototype = {
   // CONTACTS
   /////////////////////////////////////////////////////////////////////////////////
 
-  loadContactCommFrame: function idx_loadContactCommFrame(aURL, aCallback)
-  {
-    $("#comm-frame-user").children().remove();
-    var frameHtml = '<iframe id="comm-frame-user-lookup" src="' +
-      aURL +
-      '" width="10" height="10"><p>Your browser does not support iframes.</p></iframe>';
-    $("#comm-frame-user").append(frameHtml);
-    console.log("Attaching user lookup comm frame, adding load event handler");
-    $("#comm-frame-user-lookup").load(aCallback);
-  },
-
   lookupContact: function idx_lookupContact(aURL)
   {
-    // Load a lookup iframe and query it for a handle, returning a pubkey+handle or null
-    var self = this;
+    log(typeof aURL);
+    if (aURL !== "") {
+      this.console.log("Lookup contact: URL/path is missing");
+      return;
+    }
+    //  parse uri
+    var uri = URI.parse(aURL);
+    if (uri.errors.length) {
+      this.console.error("Lookup contact: Malformed URL");
+      return;
+    }
+    var scheme, host, port, path;
+    if (uri.reference == "relative") {
+      scheme = document.location.protocol;
+      host = document.location.host;
+      port = document.location.port;
+      path = document.location.pathname + $("#contact-input")[0].value;
+    }
+    else {
+      scheme = uri.scheme;
+      host = uri.host;
+      port = uri.port;
+      path = uri.path;
+    }
+    console.log(scheme, host, port, path);
+    var url = URI.serialize({scheme : scheme,
+                             host : host,
+                             path: path,
+                             port: port
+                            });
+    console.log(url);
+    $("#comm-frame-user").children().remove();
+    var frameHtml = '<iframe id="comm-frame-user-lookup" src="' +
+      url +
+      '" width="10" height="10"><p>Your browser does not support iframes.</p></iframe>';
+    $("#comm-frame-user").append(frameHtml);
+
     function callback (aResult)
     {
-      // XXX: set the postMessage here
+      // XXX: set thee postMessage here
+      var _req = { operation: "contact-meta-data-request" };
+      var req = JSON.stringify(_req);
+
+      $("#comm-frame-user-lookup")[0].contentWindow.postMessage(req, NULLTXT_URL);
     }
 
-    this.loadContactCommFrame(aURL, callback);
-  },
-
-  saveContact: function idx_saveContact(aContact)
-  {
-    // save the contact to *storage
-
+    console.log("Attaching user lookup comm frame, adding load event handler");
+    $("#comm-frame-user-lookup").load(callback);
   },
 
   handleContactMetaData:
@@ -552,10 +591,29 @@ NullTxt.prototype = {
       log(aMetaData);
       var id = aMetaData["user-handle"] + "@" + aMetaData["default-endpoint"];
       this.saveContact(id, aMetaData);
+      // tell user the contact was found
+      this.contactLookupSuccess(aMetaData);
+      // reset contact lookup UI
+      this.contactLookupReset();
     }
     else {
       console.error("nulltxt.handleContactMetaData: Malformed contact metadata");
     }
+  },
+
+  contactLookupSuccess: function idx_contactLookupSuccess(aUserData)
+  {
+    // XXX: aUserData might be an array??
+    var node = '<li>' + aUserData["user-handle"] + '</li>';
+    var result = $(node);
+    $("#contact-lookup-result").append(result);
+    this.console.log("User lookup successful");
+    $("#contact-lookup-progress").hide();
+  },
+
+  contactLookupReset: function idx_contactLookupReset()
+  {
+    $("#contact-lookup-btn")[0].disabled = false;
   },
 
   saveContact: function saveContact(aID, aContactObj)
@@ -564,11 +622,11 @@ NullTxt.prototype = {
     if (contacts[aID]) {
       // XXX: do a destructive update for now...
       for (var prop in aContactObj) {
-        if (!(prop in contacts[aID][prop])) {
-          contacts[aID][prop] = aContacts[prop];
+        if (!(contacts[aID][prop])) {
+          contacts[aID][prop] = aContactObj[prop];
         }
-        else if (contacts[aID][prop] != aContacts[prop]) {
-          contacts[aID][prop] = aContacts[prop];
+        else if (contacts[aID][prop] != aContactObj[prop]) {
+          contacts[aID][prop] = aContactObj[prop];
         }
       }
     }

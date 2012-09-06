@@ -37,7 +37,17 @@ function receiveMsg(aEvt)
   // else {
   //   throw new Error("Cannot send message, origin verification failed.");
   // }
-  var msg = JSON.parse(aEvt.data);
+  try {
+    var msg = JSON.parse(aEvt.data);
+  }
+  catch (ex) {
+    if (typeof aEvt.data == "object") {
+      var msg = aEvt.data; // already an OBJECT?
+    }
+    else {
+      throw new Error(ex);
+    }
+  }
 
   switch(msg.operation) {
   case "incoming-message":
@@ -57,7 +67,8 @@ function receiveMsg(aEvt)
     log(commData);
     // convert to string
     var commDataJSON = JSON.stringify(commData);
-    aEvt.source.postMessage(commData, NULLTXT_URL);
+    log(commDataJSON);
+    aEvt.source.postMessage(commDataJSON, NULLTXT_URL);
     break;
   case "fetch-msgs-request":
     // XXX: xhr to get the messages, return the response to calling window
