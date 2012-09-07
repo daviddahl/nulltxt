@@ -40,6 +40,10 @@ $(document).ready(function (){
     $("#contact-input")[0].focus();
   });
 
+  $("#add-contact-message-btn").click(function (evt){
+    nulltxt.chooseContact();
+  });
+
   $("#contact-lookup-btn").click(function (evt){
     $("#contact-lookup-progress").show();
     this.disabled = true;
@@ -90,6 +94,9 @@ $(document).ready(function (){
   });
   $("#compose-send").click(function (evt){
     nulltxt.composeSend();
+  });
+  $("#compose-save").click(function (evt){
+    nulltxt.composeSave();
   });
 
   // double-click handler:
@@ -462,11 +469,25 @@ NullTxt.prototype = {
   populateContacts: function idx_populateContacts()
   {
     // generate contacts list addresses can be chosen from
+    var html = "";
+    for (var handle in this.contacts) {
+      html = '<option id="' + handle + '">' + handle + '</option>';
+      $("#contacts-list").append($(html));
+    }
   },
 
-  addressMessage: function idx_addressMessage(aAddress)
+  chooseContact: function idx_chooseContact()
   {
-    //
+    // get the selected contact and add them to the message 'to:'
+    var select = $("#contacts-list")[0];
+    var value = select.childNodes.item(select.selectedIndex).value;
+    console.log("value: ", value);
+    if (value) {
+      var html = '<li>'
+                 + value
+                 + '</li>';
+      $("#compose-addressees").append($(html));
+    }
   },
 
   /////////////////////////////////////////////////////////////////////////////////
@@ -483,6 +504,8 @@ NullTxt.prototype = {
     $("#inbox-view").hide();
     $("#compose-view").show();
     this._composing = true;
+    // XXX: change this so we only call it when a contact is added or removed
+    this.populateContacts();
   },
 
   composeCancel: function canelCompose()
@@ -495,6 +518,53 @@ NullTxt.prototype = {
 
   composeSave: function saveCompose()
   {
+    // TODO: drafts object
+    // XXX: get uuid if no ID exists, branch on that as we have to lookup
+    // the draft and re-save
+    var uuid = UUID.generate();
+    var _addresses = $("#compose-addressees").children();
+    var addrs = [];
+    $.map(_addresses, function (node){addrs.push(node.textContent);});
+    var self = this;
+    var draftMessage = {
+      id: uuid,
+      to: addrs,
+      message: $("#compose-message")[0].value,
+      from: self.settings.handle,
+      time: Date.now()
+    };
+    console.log(draftMessage);
+    this._drafts[uuid] = draftMessage;
+    // Let 15 seconds elapse before saving the drafts again
+    if (!this.draftsSaved || ((this.draftsSaved - Date.now()) > 900)) {
+      localStorage.setItem("drafts", JSON.stringify(this._drafts));
+      this.console.log("Drafts saved to disk");
+    }
+  },
+
+  draftsSaved: null,
+
+  get drafts() {
+    log("get drafts()");
+    if (this._drafts) {
+      return this._drafts;
+    }
+    var drafts = localStorage.getItem("drafts");
+    if (drafts) {
+      this._drafts = JSON.parse(drafts);
+      return this._drafts;
+    }
+    this.console.warn("Drafts is null, going to create it");
+    localStorage.setItem("drafts", JSON.stringify({}));
+    this._drafts = JSON.parse(localStorage["drafts"]);
+    this.console.log("Created drafts.");
+    return this._drafts;
+  },
+
+  _drafts: {},
+
+  composeLoadDraft: function idx_composeLoadDraft(aMsgID)
+  {
 
   },
 
@@ -505,7 +575,7 @@ NullTxt.prototype = {
     // 2. once the frame(s) is/are loaded we can cycle through them, calling sendMsg
     var frameURI = NULLTXT_URL;
     // x. Generate an ID for the message?
-    var msgID = Date.now() + '-' + frameURI + '-' + Math.floor(Math.random() * 10000000);
+    var msgID = UUID.generate();
 
     this.sendMsg($("#compose-message")[0].value, msgID);
     this.console.log("Attempting to send message " + msgID);
@@ -517,7 +587,17 @@ NullTxt.prototype = {
     this.cancelCompose();
   },
 
-  composeSelectRecipient: function idx_composeSelectRecipient()
+  /////////////////////////////////////////////////////////////////////////////////
+  // SENT MESSAGES
+  /////////////////////////////////////////////////////////////////////////////////
+
+  _sentMsgs: {},
+
+  get sentMsgs() {
+
+  },
+
+  saveSentMsgs: function idx_saveSentMsgs(aMsgs)
   {
 
   },
@@ -529,7 +609,7 @@ NullTxt.prototype = {
   lookupContact: function idx_lookupContact(aURL)
   {
     log(typeof aURL);
-    if (aURL !== "") {
+    if (!aURL) {
       this.console.log("Lookup contact: URL/path is missing");
       return;
     }

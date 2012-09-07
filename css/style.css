@@ -4,20 +4,24 @@ body {
     color: rgb(71, 71, 71);
 }
 
-select#inbox { width: 50%; height: 50%;} 
+select#inbox { width: 90%; height: 70%; font-size: 110%;} 
 div#read-msg { font-size: 15px; }
 
 #compose { width: 90%; height:80%; }
 textarea#compose-message { width: 75%; height: 40%; }
+#compose-message-id { /* display: none; */ }
 
 #console { font-family: monospace; 
            font-size: 12px; 
            color: green; 
            background-color: black;
-           width: 400px;
+           width: 90%;
            height: 100px;
            overflow: scroll; }
 #console.console-error { color: red;  }
 #console.console-warn { color: orange;  }
 
 #settings-list {   }
+
+h1 { font-size: 99%; }
+h2 { font-size: 90%;  }

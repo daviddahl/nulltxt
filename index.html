@@ -9,10 +9,11 @@
   <script src="js/jquery.js"></script>
   <script src="js/nulltxt-index.js"></script>
   <script type="text/javascript" src="js/uri.js"></script>
+  <script type="text/javascript" src="js/uuid.js"></script>
 </head>
 <body>
 <p>
-  <h1>nulltxt messaging</h1>
+  <h1>nulltxt</h1>
 </p>
 <div id="inbox-view" class="top-view">
   <h2 id="main-focus-toolbar">
@@ -34,9 +35,11 @@
 
 <!-- COMPOSE MESSAGE -->
 <div id="compose-view" class="top-view">
+  <div id="compose-message-id"></div>
   <select id="contacts-list"></select> 
   <button id="add-contact-message-btn">add contact</button>
   <br />
+  <ul id="compose-addressees"></ul>
   <textarea cols="40" rows="10" id="compose-message"></textarea>
   <br />
   <button id="compose-cancel">cancel</button>
@@ -51,7 +54,7 @@
   <!--   <option>https://</option> -->
   <!--   <option>http://</option> -->
   <!-- </select> -->
-  <input size="30" id="contact-input"/>
+  <input size="20" id="contact-input"/>
   <button id="contact-lookup-btn">lookup</button>
   <button id="contact-lookup-cancel-btn">cancel</button>
   <div id="contact-lookup-progress">
