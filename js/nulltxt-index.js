@@ -11,7 +11,39 @@ function log(aMsg)
     for (var prop in arguments) {
       msg.push(arguments[prop]);
     }
-    console.log("nulltxt-index: " + msg.join(" "));
+    console.log(document.location.pathname + ": " + msg.join(" "));
+  }
+}
+
+function pprint(aObj, aRecurse)
+{
+  var depth = "";
+  if (typeof aObj == "object") {
+    if (aObj.constructor == Array) {
+      log("Array:", aObj);
+      console.log(aObj);
+    }
+    else {
+      log("Object: ", aObj.constructor);
+      for (var prop in aObj) {
+        if (aRecurse) {
+          pprint(aObj[prop]);
+        }
+        if (typeof aObj[prop] == "function") {
+          log("function ", prop);
+        }
+        else {
+          log(prop, ": ", aObj[prop]);
+          if ((aObj[prop] != "" && aObj[prop] != undefined) &&
+            (typeof aObj[prop] != "number" || typeof aObj[prop] != "string")) {
+            console.log(aObj[prop]);
+          }
+        }
+      }
+    }
+  }
+  else {
+    log((typeof aObj),": ", aObj);
   }
 }
 
@@ -568,9 +600,24 @@ NullTxt.prototype = {
 
   },
 
-  composeSend: function sendCompose()
+  composeSend: function composeSend()
   {
+    this.console.log("sending message...");
     // 1. based on the selected contact(s), we need to load a frame or series of frames
+    var addressees = [];
+    $("#compose-addressees").map(function (aNode){
+      addressees.push(aNode.text());
+    });
+    if (addressees.length) {
+      // begin loading addressees' comm pages
+      for (var idx in addressees) {
+        var commPage = this.contacts[addressees[idx]].split("@")[1];
+        // load the commPage
+
+        // postMessage the message
+      }
+    }
+
 
     // 2. once the frame(s) is/are loaded we can cycle through them, calling sendMsg
     var frameURI = NULLTXT_URL;
@@ -591,15 +638,155 @@ NullTxt.prototype = {
   // SENT MESSAGES
   /////////////////////////////////////////////////////////////////////////////////
 
-  _sentMsgs: {},
+  _sentMsgs: null,
 
   get sentMsgs() {
-
+    if (!this._sentMsgs) {
+      // Try to load msgs from localStorage
+      if (localStorage["sentMsgs"]) {
+        this._sentMsgs = JSON.parse(localStorage["sentMsgs"]);
+      }
+      else {
+        var _sentMsgs = {_index:[]};
+        localStorage["sentMsgs"] = JSON.stringify(_sentMsgs);
+        this._sentMsgs = _sentMsgs;
+      }
+    }
+    return this._sentMsgs;
   },
 
   saveSentMsgs: function idx_saveSentMsgs(aMsgs)
   {
+    var self = this;
+    var numSaved = 0;
+    function saveSentMsg(aMsg)
+    {
+      if (aMsg.id == "_index") {
+        self.console.error("A message cannot use '_index' as an ID!");
+        return;
+      }
+      // Make sure the message is not already in the database:
+      var _msg = self._sentMsgs[aMsg.id];
+      if (_msg) {
+        self._sentMsgs._index.push(aMsg.id);
+      }
+      self._sentMsgs[aMsg.id] = aMsg;
+      numSaved++;
+    }
+    if (aMsgs.length) {
+      // Array of messages passed in
+      for (var msg in aMsgs) {
+        saveSentMsg(msg);
+      }
+    }
+    else {
+      saveSentMsg(aMsgs);
+    }
+    if (numSaved) {
+      localStorage.setItem("sentMsgs", JSON.stringify(this._sentMsgs));
+    }
+  },
 
+  loadSentMsgs: function idx_loadSentMsgs(aSelectNode)
+  {
+    $(aSelectNode).children().remove();
+    for (var idx in this.sentMsgs["_index"]) {
+      var html = '<option>'
+                   + this.sentMsgs[idx].content
+                 + '</option>';
+      aSelectNode.appendChild($(html)[0]);
+    }
+  },
+
+  /////////////////////////////////////////////////////////////////////////////////
+  // OUTBOX MESSAGES
+  /////////////////////////////////////////////////////////////////////////////////
+
+  _outBoxMsgs: null,
+
+  get outBoxMsgs() {
+    if (!this._outBoxMsgs) {
+      // Try to load msgs from localStorage
+      if (localStorage["outBoxMsgs"]) {
+        this._outBoxMsgs = JSON.parse(localStorage["outBoxMsgs"]);
+      }
+      else {
+        var _outBoxMsgs = {_index:[]};
+        localStorage["outBoxMsgs"] = JSON.stringify(_outBoxMsgs);
+        this._outBoxMsgs = _outBoxMsgs;
+      }
+    }
+    return this._outBoxMsgs;
+  },
+
+  saveOutboxMsgs: function idx_saveOutBoxMsgs(aMsgs)
+  {
+    var self = this;
+    var numSaved = 0;
+    function saveOutBoxMsg(aMsg)
+    {
+      if (aMsg.id == "_index") {
+        self.console.error("A message cannot use '_index' as an ID!");
+        return;
+      }
+      // Make sure the message is not already in the database:
+      var _msg = self._outBoxMsgs[aMsg.id];
+      if (_msg) {
+        self._outBoxMsgs._index.push(aMsg.id);
+      }
+      self._outBoxMsgs[aMsg.id] = aMsg;
+      numSaved++;
+    }
+    if (aMsgs.length) {
+      // Array of messages passed in
+      for (var msg in aMsgs) {
+        saveOutBoxMsg(msg);
+      }
+    }
+    else {
+      saveOutBoxMsg(aMsgs);
+    }
+    if (numSaved) {
+      localStorage.setItem("outBoxMsgs", JSON.stringify(this._outBoxMsgs));
+    }
+  },
+
+  loadOutBox: function idx_loadOutBox(aSelectNode)
+  {
+    $(aSelectNode).children().remove();
+    for (var idx in this.outBoxMsgs["_index"]) {
+      var html = '<option>'
+                   + this.outBoxMsgs[idx].content
+                 + '</option>';
+      aSelectNode.appendChild($(html)[0]);
+    }
+  },
+
+  removeBoxedMessage: function idx_removeBoxedMessage(aID, aBox)
+  {
+    switch(aBox) {
+    case "out":
+      if (this._outBoxMsgs[aID]) {
+        delete this._outBoxMsgs[aID];
+        var idx = this._outBoxMsgs._index.indexOf(aID);
+        if (idx) {
+          this._outBoxMsgs._index.remove(idx);
+        }
+      }
+      break;
+    case "sent":
+      if (this._sentMsgs[aID]) {
+        delete this._sentMsgs[aID];
+        var idx = this._sentMsgs._index.indexOf(aID);
+        if (idx) {
+          this._sentMsgs._index.remove(idx);
+        }
+      }
+      break;
+    default:
+      this.console.warn("Cannot remove message from non-existant box");
+      return;
+    }
   },
 
   /////////////////////////////////////////////////////////////////////////////////
@@ -805,4 +992,20 @@ NullTxt.prototype = {
   // XXX: separate INBOX for whitelist requests. allow one per publicKey
   //      * auto delete these requests so they do not fill up disks
   //      * treat the whitelist request as less important than a message
+
+  // XXX: DEFINE THESE THINGS:
+  //      * message object
+  //      * incoming endpoint url/frame
+  //        ** XHR operation
+  //      * outgoing endpoint url/frame
+  //        ** XHR operation
+  //      * whitelist operation
+  //
+};
+
+// Prototype extensions
+Array.prototype.remove = function(from, to) {
+  var rest = this.slice((to || from) + 1 || this.length);
+  this.length = from < 0 ? this.length + from : from;
+  return this.push.apply(this, rest);
 };
