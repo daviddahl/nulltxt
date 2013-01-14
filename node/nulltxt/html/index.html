@@ -1,0 +1,122 @@
+<!doctype html>
+<head>
+  <meta charset="utf-8">
+  <title>nulltxt</title>
+  <meta name="description" content="nulltxt comm page">
+  <meta name="viewport" 
+        content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/jquery.js"></script>
+  <script src="js/nulltxt-index.js"></script>
+  <script type="text/javascript" src="js/uri.js"></script>
+  <script type="text/javascript" src="js/uuid.js"></script>
+</head>
+<body>
+<p>
+  <h1>nulltxt</h1>
+</p>
+<div id="inbox-view" class="top-view">
+  <h2 id="main-focus-toolbar">
+    <button id="main-focus-fetch-msgs">fetch</button> 
+    <button id="main-focus-compose">compose</button>
+    <button id="main-focus-contacts">contacts</button>
+    <button id="main-focus-settings">settings</button> 
+  </h2>
+  <select id="inbox" multiple>
+  </select>
+</div>
+
+<div id="read-messages-view" class="top-view">
+  <div id="read-msg">
+    <h2 id="read-msg-toolbar"><button id="read-msg-close">Close</button></h2>
+    <pre id="read-msg-content"></pre>
+  </div>
+</div>
+
+<!-- COMPOSE MESSAGE -->
+<div id="compose-view" class="top-view">
+  <div id="compose-message-id"></div>
+  <select id="contacts-list"></select> 
+  <button id="add-contact-message-btn">add contact</button>
+  <br />
+  <ul id="compose-addressees"></ul>
+  <textarea cols="40" rows="10" id="compose-message"></textarea>
+  <br />
+  <button id="compose-cancel">cancel</button>
+  <button id="compose-save">save</button> 
+  <button id="compse-send">send</button>
+</div>
+
+<!-- CONTACT LOOKUP -->
+<div id="contact-lookup" class="top-view">
+  <h2>contact lookup: enter contact's comm url</h2>
+  <!-- <select id="contact-scheme"> -->
+  <!--   <option>https://</option> -->
+  <!--   <option>http://</option> -->
+  <!-- </select> -->
+  <input size="20" id="contact-input"/>
+  <button id="contact-lookup-btn">lookup</button>
+  <button id="contact-lookup-cancel-btn">cancel</button>
+  <div id="contact-lookup-progress">
+    <img src="img/progress-bar.gif" border="0"/>
+  </div>
+  <ul id="contact-lookup-result"></ul>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings-view" class="top-view">
+  <ul id="settings-list">
+    <li>
+      <label for="handle">user handle</label>
+      <input id="handle"/>
+    </li>
+    <li>
+      <label for="incoming-url">incoming url</label>
+      <input id="incoming-url"/>
+    </li>
+    <li>
+      <label for="outgoing-url">outgoing url</label>
+      <input id="outgoing-url"/>
+    </li>
+    <li>
+      <label for="api-key">api key</label>
+      <input id="api-key"/>
+    </li>
+    <li>
+      <button id="settings-save">save</button>
+      <button id="settings-close">close</button>
+    </li>
+  </ul>
+</div>
+
+<!-- INVITATION -->
+<div id="invite-view" class="top-view">
+</div>
+
+<!-- CONSOLE -->
+<h2>console</h2>
+<div id="console">
+</div>
+
+<!-- COMM FRAMES -->
+<!-- OUT FRAME -->
+<div id="comm-frame-out">
+  <iframe id="comm-frame-outgoing" src="comm.html" width="10" height="10">
+    <p>Your browser does not support iframes.</p>
+  </iframe>
+</div>
+<!-- IN FRAME -->
+<div id="comm-frame-in">
+  <iframe id="comm-frame-incoming" src="comm.html" width="10" height="10">
+    <p>Your browser does not support iframes.</p>
+  </iframe>
+</div>
+<!-- USER LOOKUP FRAME -->
+<div id="comm-frame-user">
+  <iframe id="comm-frame-user-lookup" src="comm.html" width="10" height="10">
+    <p>Your browser does not support iframes.</p>
+  </iframe>
+</div>
+
+</body>
+</html>
