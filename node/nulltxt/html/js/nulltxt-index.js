@@ -76,6 +76,10 @@ $(document).ready(function (){
     nulltxt.chooseContact();
   });
 
+  $("#invite-new-contact-message-btn").click(function (evt){
+    nulltxt.inviteColleague();
+  });
+
   $("#contact-lookup-btn").click(function (evt){
     $("#contact-lookup-progress").show();
     this.disabled = true;
@@ -108,6 +112,13 @@ $(document).ready(function (){
   });
 
   $("#settings-view").hide();
+  $("#invite-view").hide();
+  $("#lookup-invite-view").hide();
+
+  $("#verify-invite-btn").click(function (evt) {
+    var inviteID = localStorage.getItem("currentInvitation");
+    nulltxt.verifyAcceptInvite();
+  });
 
   $("#settings-close").click(function (evt){
     $("#settings-view").hide();
@@ -140,6 +151,38 @@ $(document).ready(function (){
   $("#read-msg-close").click(function(evt){
     nulltxt.closeMsg();
   });
+
+  $("#verify-invite-view").hide();
+
+  var re = /lookup-invite/;
+  if (re.exec(document.location.search)) {
+    var iid = URI.parse(document.location).query.split("&")[0].split("=")[1];
+    log("IID: " + iid);
+    if (iid) {
+      localStorage.setItem("currentInvitation", iid);
+      setTimeout(function () {
+        nulltxt.lookupInvite();
+      }, 1000);
+    }
+  }
+
+  re = /invitation/;
+  log(document.location.search);
+  if (re.exec(document.location.search)) {
+    log("INVITE FOUND");
+    var iid = URI.parse(document.location).query.split("&")[0].split("=")[1];
+    log(iid);
+    if (iid) {
+      localStorage.setItem("currentInvitation", iid);
+      setTimeout(function () {
+        nulltxt.verifyInvite();
+      }, 1000);
+    }
+  } else {
+    log("NOTHING");
+  }
+
+// END initialization of events
 });
 
 function notify(aMsg)
@@ -661,6 +704,15 @@ NullTxt.prototype = {
 
   inviteColleague: function inviteColleague()
   {
+    if($('#compose-view').is(':visible')) {
+      this._revertToView = $('#compose-view');
+      $('#compose-view').hide();
+    }
+    if($('#contacts-view').is(':visible')) {
+      this._revertToView = $('#contacts-view');
+      $('#contacts-view').hide();
+    }
+
     var self = this;
     var url = "/invite/";
     // Authenticate with server, get back an invite URL to share...
@@ -685,11 +737,13 @@ NullTxt.prototype = {
     });
   },
 
+  _revertToView: $("#inbox-view"),
+
   displayInvite: function displayInvite(aInviteID)
   {
-    var html = "<div><h1>nulltxt Invitation</h1>"
+    var html = "<div><h1>nulltxt invitation</h1>"
                + "<h2>Send this link to your friend<h2>"
-               + "<h3>https://nulltxt.se/use-invite?iid="
+               + "<h3>" + NULLTXT_URL +"/?invitation="
                + aInviteID
                + "</h3>"
                + "<button onclick=\"nulltxt.closeInvite();\">done</button>";
@@ -708,7 +762,53 @@ NullTxt.prototype = {
   {
     $("#invite-view").children().remove();
     $("#invite-view").hide();
-    $("#inbox-view").show();
+    this._revertToView.show();
+    this._revertToView = $("#inbox-view");
+  },
+
+  verifyInvite: function verifyInvite()
+  {
+    $("#inbox-view").hide();
+    $("#verify-invite-view").show();
+  },
+
+  verifyAcceptInvite: function verifyAcceptInvite()
+  {
+    var self = this;
+    // check if invite is legit and accept it
+    var iid = localStorage.getItem("currentInvitation");
+    var url = "/accept-invite/?iid=" + iid;
+    $.ajax({
+      type: "GET",
+      url: url,
+      dataType: "json"
+    }).done(function(msg) {
+      if (msg.status == "success") {
+        // add this contact to "contacts"
+        var contacts = self._contacts;
+        var idx = msg.invite.inviterHandle + "@" + NULLTXT_URL;
+
+        var metaData = {
+          "user-handle": msg.invite.inviterHandle,
+          "default-endpoint": NULLTXT_URL,
+          "public-key": msg.invite.inviterPublicKey
+        };
+
+        self.saveContact(idx, metaData);
+        self.contactLookupReset();
+
+        // XXXddahl: respond in kind: add a new invite back to the existing
+        // user when/if account is created
+        localStorage.setItem("invitationResponse",
+                             JSON.stringify({recv: msg.invite.inviterHandle}));
+        // clean up - does this user have an account?
+        
+        // create account routine
+      }
+      else {
+        self.console.error("Could not verify/accept new contact information");
+      }
+    });
   },
 
   /////////////////////////////////////////////////////////////////////////////////

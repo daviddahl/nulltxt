@@ -56,10 +56,8 @@ app.get('/', function(req, res) {
 app.get('/verify-handle', function (req, res) {
   log("verfiy-handle");
   var handle = req.param("handle");
-  log("handle: " + handle);
-  var result = db["nulltxt.handles"].findOne({handle: handle}, function (err, result){
-    log("findOne callback");
-    log(result);
+  var result = db["nulltxt.handles"].findOne({handle: handle},
+  function (err, result){
     if (result) {
       if (result.handle == handle) {
         log("handle: " + result.handle);
@@ -188,11 +186,8 @@ function authenticate(aHandle, aToken, aCallback)
 
 app.post("/invite/", function (req, res) {
   log("/invite/");
-  log(req.body);
   var handle = req.param('handle');
-  log(handle);
   var token = req.param('token');
-  log(token);
   var senderPublicKey = req.param('publicKey');
 
   var hash = crypto.createHash("sha256");
@@ -211,8 +206,6 @@ app.post("/invite/", function (req, res) {
         // XXX: this should time out after 1 day?? 1 hour?? user specified?
         db["nulltxt.invites"].save({handle: handle, publicKey: senderPublicKey},
         function (err, result){
-          log("invites save callback");
-          log(result);
           if (!err) {
             res.send(JSON.stringify({inviteID: result._id, status: "success"}));
           }
@@ -223,8 +216,48 @@ app.post("/invite/", function (req, res) {
         });
       }
       else {
-        // return false;
         res.send(JSON.stringify({status: "failure", msg: "authentication failed"}));
+      }
+    }
+  });
+});
+
+// ACCEPT INVITATION
+
+app.get("/lookup-invite/", function (req, res) {
+  log("/lookup-invite/");
+  // XXX: Landing page explains the process of connection with your colleague
+
+}) ;
+
+app.get("/accept-invite/", function (req, res) {
+  log("/accept-invite/");
+  var iid = req.param('iid');
+  log(iid);
+  log(db.ObjectId);
+  // lookup invite in mongo
+  db["nulltxt.invites"].findOne({_id: db.ObjectId(iid)},
+  function (err, result) {
+    if (err) {
+      log(err);
+      res.send(JSON.stringify({status: "failure",
+                               msg: "Error: No such invitation code exists"}));
+    }
+    if (!result) {
+      res.send(JSON.stringify({status: "failure",
+                               msg: "DB result was null. No such invitation code exists"}));
+    }
+    else {
+      if (result._id == iid) {
+        res.send(JSON.stringify({status: "success",
+                                 msg: "Invitation found",
+                                 invite: {id: iid,
+                                          inviterPublicKey: result.publicKey,
+                                          inviterHandle: result.handle}
+                                }));
+        // remove the invite from mongo
+        db["nulltxt.invites"].remove({_id: db.ObjectId(iid)}, 1);
+
       }
     }
   });
