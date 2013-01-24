@@ -15,11 +15,28 @@
 <p>
   <h1>nulltxt</h1>
 </p>
+
+<!-- BEGIN -->
+<div id="begin-view" class="top-view">
+  <h2>nulltxt is a messaging system</h2>
+  <p>This system is a research project into using encryption already in browsers to secure email-like messages with trusted colleagues. In order to use nulltxt, you need to:
+    <ul>
+      <li>
+        <button id="create-handle-btn">Create</button> a nulltxt 'handle' (username)
+      </li>
+      <li>Install the <a href="https://addons.mozilla.org/en-US/firefox/addon/nulltxt/">nulltxt extension</a>
+      </li>
+      <li><button id="begin-using-btn">Begin using nulltxt</button></li>
+  </p>
+</div>
+
+<!-- INBOX VIEW -->
 <div id="inbox-view" class="top-view">
   <h2 id="main-focus-toolbar">
     <button id="main-focus-fetch-msgs">fetch</button> 
     <button id="main-focus-compose">compose</button>
-    <button id="main-focus-contacts">contacts</button>
+    <button id="invite-new-contact-btn">invite</button>
+    <!-- <button id="main-focus-contacts">contacts</button> -->
     <button id="main-focus-settings">settings</button> 
   </h2>
   <select id="inbox" multiple>
@@ -28,7 +45,11 @@
 
 <div id="read-messages-view" class="top-view">
   <div id="read-msg">
-    <h2 id="read-msg-toolbar"><button id="read-msg-close">Close</button></h2>
+    <h2 id="read-msg-toolbar">
+      From: <span id="read-msg-from"></span> 
+      <button id="read-msg-decrypt">Decrypt/Read</button>
+      <button id="read-msg-close">Close</button>
+    </h2>
     <pre id="read-msg-content"></pre>
   </div>
 </div>
@@ -41,11 +62,13 @@
   <button id="invite-new-contact-message-btn">invite new contact</button>
   <br />
   <ul id="compose-addressees"></ul>
-  <textarea cols="40" rows="10" id="compose-message"></textarea>
-  <br />
-  <button id="compose-cancel">cancel</button>
-  <button id="compose-save">save</button> 
-  <button id="compse-send">send</button>
+  <div id="compose-controls">
+    <textarea cols="20" rows="5" id="compose-message" readonly="yes"></textarea>
+    <br />
+    <button id="compose-cancel">cancel</button>
+    <button id="compose-save">save</button> 
+    <button id="compse-send">send</button>
+  </div>
 </div>
 
 <!-- CONTACT LOOKUP -->

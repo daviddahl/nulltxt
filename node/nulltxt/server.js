@@ -107,76 +107,106 @@ app.get('/claim-handle', function (req, res) {
 
 app.get("/msg/in/", function (req, res) {
   var handle = req.param("handle");
-  // var dbPassCode = req.param("passcode");
+  var token = req.param("token");
   log("handle: " + handle);
-  // log(db);
-  db["nulltxt.messages"].find(function (err, docs) {
-    if (err) {
-      var _res = {
-        status: "failure",
-        msg: "Could not get messages!"
-      };
-      res.send(JSON.stringify(_res));
-      return;
-    }
 
-    log("docs: " + docs);
-
-    var _res = {
-      msgs: docs,
-      status: "success"
-    };
-
-    res.send(JSON.stringify(_res));
-  });
+  function authSuccess()
+  {
+    // XXX: need to get only unread messages
+    db["nulltxt.messages"].find({recipient: handle}, function (err, result) {
+      if (err) {
+        res.send(JSON.stringify({status: "failure", msg: err}));
+      }
+      if (result) {
+        res.send(JSON.stringify({status: "success", msgs: result}));
+        // XXX: mark fetched messages as received - or - delete them
+      }
+      else {
+        // XXX: check for zero messages, which is not an error condition
+        res.send(JSON.stringify({status: "success", msgs: []}));
+      }
+    });
+  }
+  function authError(err)
+  {
+    res.send(JSON.stringify({status: "failure", msg: err}));
+  }
+  authenticate(handle, token, authSuccess, authError);
 });
 
 // SEND MESSAGES
 
 app.post("/msg/out/", function (req, res) {
+  log("/msg/out/");
   var handle = req.param("handle");
-  // var dbPassCode = req.param("passcode");
-  var _msgs = req.param("msgs");
-  var msgs;
-  try {
-    msgs = JSON.stringify(_msgs);
-    for (var i = 0; i < msgs.length; i++) {
-      db["nulltxt.messages"].save(msgs[i]);
-    }
+  var token = req.param("token");
+  var message = req.param("message");
+  var recipient = req.param("recipient");
+  var publicKey = req.param("publicKey");
 
-    var _res = {
-      status: "success",
-      msg: "Messages accepted"
-    };
+  // success callback
+  function authSuccess()
+  {
+    // make sure the recipient exists (XXX: and the sender can send the message!)
+    db["nulltxt.handles"].findOne({handle: handle}, function (err, result) {
+      if (err) {
+        res.send(JSON.stringify({status: "failure", msg: err}));
+        return;
+      }
+      if (result) {
+        // the recipient exists, we should save the message!
+        db["nulltxt.messages"].save({recipient: recipient,
+                                     from: handle,
+                                     fromPublickey: publicKey,
+                                     message: message,
+                                     recieved: Date.now()}, function (err, result) {
+          if (err) {
+            res.send(JSON.stringify({status: "failure", msg: err }));
+          }
+          if (result) {
+            var _res = {
+              status: "success",
+              msg: "Messages accepted"
+            };
 
-    res.send(JSON.stringify(_res));
+            res.send(JSON.stringify(_res));
+          }
+        });
+      }
+    });
   }
-  catch (ex) {
-    res.send("{\"status\": \"failure\", \"msg\": \"No outgoing messages detetcted\"}");
+  // error callback
+  function authError(err)
+  {
+    res.send(JSON.stringify({status: "failure", msg: err}));
   }
+  // authenticate
+  authenticate(handle, token, authSuccess, authError);
 });
 
 // LOOKUP USER KEY/ACCT
 
 // AUTHENTICATION
 
-function authenticate(aHandle, aToken, aCallback)
+function authenticate(aHandle, aToken, aSuccessCallback, aFailureCallback)
 {
+  log("authenticate()");
+  log("aToken" + aToken);
   var hash = crypto.createHash("sha256");
   hash.update(aToken);
   var hashedToken = hash.digest(encoding='base64');
 
   db["nulltxt.handles"].findOne({handle: aHandle, token: hashedToken},
   function (err, result) {
-    if (!result) {
-      return false;
+    if (err) {
+      aFailureCallback(err);
     }
     else if (result) {
       if (result.handle == aHandle) {
-        return true;
+        aSuccessCallback();
       }
       else {
-        return false;
+        aFailureCallback("Error: Cannot authenticate!");
       }
     }
   });
@@ -197,25 +227,31 @@ app.post("/invite/", function (req, res) {
   db["nulltxt.handles"].findOne({handle: handle, token: hashedToken},
   function (err, result) {
     if (!result) {
+      log("Error: Handle not found.");
+      res.send({status: "failure",
+                msg: "Handle not found"});
       return false;
     }
     else if (result) {
       if (result.handle == handle) {
-        // return true;
+        log("handle found! " + handle);
         // generate an invite link, include the handle and pubkey in the db record
         // XXX: this should time out after 1 day?? 1 hour?? user specified?
         db["nulltxt.invites"].save({handle: handle, publicKey: senderPublicKey},
         function (err, result){
           if (!err) {
+            log("invite saved");
             res.send(JSON.stringify({inviteID: result._id, status: "success"}));
           }
           else {
+            log("invite not saved: " + err);
             res.send(JSON.stringify({status: "failure",
                                      msg: "Error creating invite"}));
           }
         });
       }
       else {
+        log("handle not found!");
         res.send(JSON.stringify({status: "failure", msg: "authentication failed"}));
       }
     }
@@ -239,11 +275,12 @@ app.get("/accept-invite/", function (req, res) {
   db["nulltxt.invites"].findOne({_id: db.ObjectId(iid)},
   function (err, result) {
     if (err) {
-      log(err);
+      log("nulltxt.invites err: " + err);
       res.send(JSON.stringify({status: "failure",
                                msg: "Error: No such invitation code exists"}));
     }
     if (!result) {
+      log("nulltxt.invites: result is null. ");
       res.send(JSON.stringify({status: "failure",
                                msg: "DB result was null. No such invitation code exists"}));
     }

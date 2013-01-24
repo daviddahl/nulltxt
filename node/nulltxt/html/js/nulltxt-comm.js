@@ -73,8 +73,8 @@ function receiveMsg(aEvt)
   case "fetch-msgs-request":
     // XXX: xhr to get the messages, return the response to calling window
     // XXX: API key needed here to fetch the messages?
-    if (msg.user && msg.apiKey) {
-      comm.fetchIncomingMsgs(msg.user, msg.apiKey, aEvt.source);
+    if (msg.user && msg.token) {
+      comm.fetchIncomingMsgs(msg.user, msg.token, aEvt.source);
     }
   case "send-msgs-request":
     if (msg.user && msg.apiKey && msg.msgs) {
@@ -108,11 +108,11 @@ var comm = {
 
   _fetching: false,
 
-  fetchIncomingMsgs: function comm_getIncomingMsgs(aUser, aApiKey, aWindow)
+  fetchIncomingMsgs: function comm_getIncomingMsgs(aUser, aToken, aWindow)
   {
     $.ajax({
       type: "GET",
-      url: RECV_MSGS_URL,
+      url: RECV_MSGS_URL + "?handle=" + aUser + "&token=" + aToken,
       dataType: "json"
     }).done(function(msgs) {
       console.log(msgs);

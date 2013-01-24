@@ -3,6 +3,10 @@ var RECV_MSGS_URL = "msg/in/";
 var SUCCESS = "success";
 var FAILURE = "failure";
 
+var ACCT_STATUS_BEGIN = 2; // Contacts may exist, but no account created yet
+var ACCT_STATUS_HANDLE_ONLY = 3; // Handle was created, keys not yet created
+var ACCT_STATUS_COMPLETE = 4; // Handle and Keys exist
+
 var debug = 1;
 function log(aMsg)
 {
@@ -59,28 +63,32 @@ $(document).ready(function (){
   $("#compose-view").hide();
   $("#contact-lookup").hide();
 
-  $("#main-focus-fetch-msgs").click(function (evt){
+  $("#main-focus-fetch-msgs").click(function (evt) {
     nulltxt.fetchMsgs();
   });
 
   // CONTACTS
 
-  $("#main-focus-contacts").click(function (evt){
+  $("#main-focus-contacts").click(function (evt) {
     $(".top-view").hide();
     $("#contact-lookup-progress").hide();
     $("#contact-lookup").show();
     $("#contact-input")[0].focus();
   });
 
-  $("#add-contact-message-btn").click(function (evt){
+  $("#add-contact-message-btn").click(function (evt) {
     nulltxt.chooseContact();
   });
 
-  $("#invite-new-contact-message-btn").click(function (evt){
+  $("#invite-new-contact-message-btn").click(function (evt) {
     nulltxt.inviteColleague();
   });
 
-  $("#contact-lookup-btn").click(function (evt){
+  $("#invite-new-contact-btn").click(function (evt) {
+    nulltxt.inviteColleague();
+  });
+
+  $("#contact-lookup-btn").click(function (evt) {
     $("#contact-lookup-progress").show();
     this.disabled = true;
     var url = $("#contact-input")[0].value;
@@ -90,7 +98,7 @@ $(document).ready(function (){
     }
   });
 
-  $("#contact-lookup-cancel-btn").click(function (evt){
+  $("#contact-lookup-cancel-btn").click(function (evt) {
     $("#contact-lookup-progress").hide();
     $("#contact-lookup-btn")[0].disabled = false;
     $("#contact-input")[0].value = "";
@@ -115,8 +123,18 @@ $(document).ready(function (){
   $("#invite-view").hide();
   $("#lookup-invite-view").hide();
 
+  $("#create-handle-btn").click(function (evt) {
+    nulltxt.chooseHandle();
+    this.disabled = true;
+  });
+
+  $("#begin-using-btn").click(function (evt) {
+    nulltxt.reload();
+  });
+
   $("#verify-invite-btn").click(function (evt) {
     var inviteID = localStorage.getItem("currentInvitation");
+    $("#begin-view").hide();
     nulltxt.verifyAcceptInvite();
   });
 
@@ -179,7 +197,7 @@ $(document).ready(function (){
       }, 1000);
     }
   } else {
-    log("NOTHING");
+    log("No special operation to handle...");
   }
 
 // END initialization of events
@@ -234,7 +252,7 @@ function receiveMsg(aEvt)
       case "fetch-msgs-response":
         nulltxt.console.log("fetch msgs response: " + msg);
         try {
-          nulltxt.handleIncomingMessages(msg.msgs.msgs); // XXX: fix this nested madness
+          nulltxt.handleIncomingMessages(msg.msgs);
         }
         catch (ex) {
           log(ex);
@@ -264,12 +282,9 @@ function NullTxt(){
   else {
     this._settings = JSON.parse(settings);
     this.console.log("settings are loaded");
-  }
-
-  var handle = this._settings["handle"];
-  if (!handle) {
-    // XXX: begin this process with an explanation of how to get started
-    this.chooseHandle();
+    if (this._settings.accountStatus == 2) {
+      $("#begin-view").hide();
+    }
   }
 }
 
@@ -280,12 +295,16 @@ NullTxt.prototype = {
                       incomingURL: "comm.html",
                       outgoingURL: "comm.html",
                       apiKey: UUID.generate(),
-                      token: null
+                      token: null,
+                      accountStatus: ACCT_STATUS_BEGIN
                     };
     var settings = JSON.stringify(_settings);
     localStorage.setItem("settings", settings);
     this.console.log("settings created.");
     this._settings = _settings;
+
+    // display the 'begin view'
+    this.begin();
   },
 
   chooseHandle: function idx_chooseHandle()
@@ -320,11 +339,14 @@ NullTxt.prototype = {
           log("claim handle done!!!");
           if (msg.status == "success") {
             log("claim handle success!!!");
-            self.updateSettings({handle: aHandle, token: token});
+            self.updateSettings({handle: aHandle,
+                                 token: token,
+                                 accountStatus: ACCT_STATUS_HANDLE_ONLY});
             // log this action to the visible console
             self.console.log("The account for " + aHandle + " is now set up.");
             self.console.log("Beginning key generation...");
             self.generateKeypair();
+            $("#begin-using-btn")[0].disabled = false;
           }
           else {
             alert(msg.msg);
@@ -332,7 +354,8 @@ NullTxt.prototype = {
         });
       }
       else {
-        alert("Could not verify handle with the server, perhaps it was JUST taken?");
+        alert("Could not verify the handle you chose, another user has claimed it.");
+        self.chooseHandle();
       }
     });
   },
@@ -357,7 +380,8 @@ NullTxt.prototype = {
         // save the keypair's public key to the settings, also save the ID
         var settings = {
           keyID: self.result.id,
-          publicKey: self.result.publicKey
+          publicKey: self.result.publicKey,
+          accountStatus: ACCT_STATUS_COMPLETE
         };
         log(settings.keyID);
         log(settings.publicKey);
@@ -369,7 +393,6 @@ NullTxt.prototype = {
       function error(aError)
       {
         that.console.error(aError);
-
       }
       cryptoKeygen(success, error);
       // tell the user about inviting friends to nulltxt
@@ -379,6 +402,11 @@ NullTxt.prototype = {
       this.console.error("navigator.bridge.getCipherObject does not exist!");
       this.console.error("You can download the 'nulltxt' extension here: https://www.nulltxt.se/ ");
     }
+  },
+
+  reload: function reload()
+  {
+    document.location = "/?begin=true&" + Math.random();
   },
 
   loadFrame: function idx_loadFrame(aURL)
@@ -422,7 +450,8 @@ NullTxt.prototype = {
     apiKey: "apiKey",
     token: "token",
     keyID: "aPublicKeyID",
-    publicKey: "aPublicKey"
+    publicKey: "aPublicKey",
+    accountStatus: "accountStatus"
   },
 
   settingsSave: function idx_settingsSave()
@@ -510,7 +539,7 @@ NullTxt.prototype = {
     {
       var msg = JSON.stringify({ operation: "fetch-msgs-request",
                                  user: self.settings.handle,
-                                 apiKey: self.settings.apiKey
+                                 token: self.settings.token
                                });
 
       $("#comm-frame-incoming")[0].contentWindow.postMessage(msg, NULLTXT_URL);
@@ -523,22 +552,28 @@ NullTxt.prototype = {
 
   handleIncomingMessages: function idx_handleIncomingMessages(aMsgs)
   {
-    for (var idx in aMsgs) {
-      if (typeof aMsgs[idx] != "object") {
-        break;
+    var msgs = aMsgs.msgs;
+    log("handleIncomingMessages()");
+    for (var idx in msgs) {
+      for (var prop in msgs[idx]) {
+        log(prop + ": " + msgs[idx][prop]);
       }
-      console.log("a message: " +  aMsgs[idx]);
+      console.log("a message: " +  msgs[idx]);
       // XXX: use IndexedDB instead, can we push storage off onto a worker?
-      // XXX: message ids should be unique
-      localStorage.setItem("msg-" + aMsgs[idx]._id, JSON.stringify(aMsgs[idx]));
+      // JSON.parse failure here..................................................
+      var message = JSON.parse(msgs[idx].message);
+      localStorage.setItem("msg-" + msgs[idx]._id, JSON.stringify(msgs[idx]));
       // XXX: use data attributes for all attrs in each message
       var msgFormat = '<option id=msg-' +
-                        aMsgs[idx]._id  +
-                        '>' +
-                        aMsgs[idx].content +
+                        msgs[idx]._id  +
+                        '>' + "From: " +
+                        msgs[idx].from +
+                        " Content: " +
+                        message.content +
                         '</option>';
         $("#inbox")[0].appendChild($(msgFormat)[0]);
-        self.console.log("Received message " + aMsgs[idx]._id + " from " + "XXX"); //
+        self.console.log("Received message " + msgs[idx]._id +
+                         " from " + msgs[idx].from);
         // XXX: set domain / path where we are getting this message from
       }
   },
@@ -572,7 +607,7 @@ NullTxt.prototype = {
       for (var idx in msgs) {
         console.log(msgs[idx]);
         // XXX: use IndexedDB instead, can we push storage off onto a worker?
-        localStorage.setItem("msg-" + msgs[idx].id, JSON.stringify(msgs[idx]));
+        localStorage.setItem("msg-" + msgs[idx]._id, JSON.stringify(msgs[idx]));
         // XXX: use data attributes for all attrs in each message
         var msgFormat = '<option id=msg-' + msgs[idx].id  + '>'
                           + msgs[idx].content + '</option>';
@@ -653,6 +688,7 @@ NullTxt.prototype = {
   {
     log("aMsgID", aMsgID);
     var msg = JSON.parse(localStorage[aMsgID]);
+    console.log(msg);
     if (!msg) {
       console.error("Cannot get message from storage");
       return;
@@ -660,7 +696,21 @@ NullTxt.prototype = {
 
     $("#inbox-view").hide();
     $("#read-messages-view").show();
-    $("#read-msg-content").text(msg.content);
+    var message = JSON.parse(msg.message);
+    $("#read-msg-from")[0].innerHTML = msg.from;
+    $("#read-msg-content").text(message.content);
+    this._currentMessageID = "msg-" + msg._id;
+  },
+
+  decryptMessage: function decryptMessage()
+  {
+    if (this._currentMessageID) {
+      let message = localStorage.getItem(this._currentMessageID);
+      if (message) {
+        message = JSON.parse(message);
+        
+      }
+    }
   },
 
   closeMsg: function closeMsg()
@@ -802,13 +852,48 @@ NullTxt.prototype = {
         localStorage.setItem("invitationResponse",
                              JSON.stringify({recv: msg.invite.inviterHandle}));
         // clean up - does this user have an account?
-        
+        if (self.settings.accountStatus == 2) {
+          // clean up
+          $("#verify-invite-view").hide();
+          $("#inbox-view").show();
+          return;
+        }
+        self.checkAccountStatus();
         // create account routine
       }
       else {
         self.console.error("Could not verify/accept new contact information");
       }
     });
+  },
+
+  checkAccountStatus: function checkAccountStatus()
+  {
+    switch(this.settings.accountStatus)
+    {
+    case ACCT_STATUS_COMPLETE:
+      return;
+    case ACCT_STATUS_HANDLE_ONLY:
+      // need to create a keypair // XXX: this seems unlikely
+      break;
+    case ACCT_STATUS_BEGIN:
+      // need to create a server account and keys
+      var handle = this._settings["handle"];
+      if (!handle) {
+        // XXX: begin this process with an explanation of how to get started
+        this.begin();
+      }
+      break;
+    default:
+      break;
+    }
+  },
+
+  begin: function begin()
+  {
+    $(".top-view").hide();
+    $("#begin-view").show();
+    $("#begin-using-btn")[0].disabled = true;
   },
 
   /////////////////////////////////////////////////////////////////////////////////
@@ -824,9 +909,27 @@ NullTxt.prototype = {
     }
     $("#inbox-view").hide();
     $("#compose-view").show();
+    $("#compose-controls").hide();
     this._composing = true;
     // XXX: change this so we only call it when a contact is added or removed
     this.populateContacts();
+    function success() {
+      $("#compose-controls").show();
+      $("#compose-message")[0].value = JSON.stringify(this.result);
+    }
+    function error(err) {
+      console.log(err);
+      console.log("Error: encryption failed.");
+      // XXX: need to create a try again button, etc
+    }
+    var recipient = $("#contacts-list")[0].firstChild.id;
+    var recipientPubKey = nulltxt.contacts[recipient]["public-key"];
+    cryptoWrite(recipientPubKey,
+                nulltxt.settings.keyID,
+                recipient.split("@")[0],
+                success,
+                error);
+    this._currentRecipient = recipient;
   },
 
   composeCancel: function canelCompose()
@@ -889,7 +992,7 @@ NullTxt.prototype = {
 
   },
 
-  composeSend: function composeSend()
+  composeSendOrig: function composeSendOrig()
   {
     this.console.log("sending message...");
     // 1. based on the selected contact(s), we need to load a frame or series of frames
@@ -921,6 +1024,45 @@ NullTxt.prototype = {
 
     // close this message compose view
     this.cancelCompose();
+  },
+
+  composeSend: function composeSend()
+  {
+    // get the to: handle
+    var recipient = this._currentRecipient.split("@")[0];
+
+    var url = "/msg/out/";
+    var self = this;
+
+    $.ajax({
+      type: "POST",
+      url: url,
+      dataType: "json",
+      data: {
+        publicKey: self.settings.publicKey,
+        handle: self.settings.handle,
+        token: self.settings.token,
+        recipient: recipient,
+        message: $("#compose-message")[0].value
+      }
+      // XXX: need a indeterminate progress indicator
+    }).done(function(res) {
+      // XXX: save the sent message to sent folder
+      if (res.status == "success") {
+        self.console.log("Success: MESSAGE SENT");
+      }
+      else {
+        self.console.log("Error: " + res.msg);
+      }
+      // XXX: Need a growl-like message here
+      alert("Message sent");
+      // clear and hide compose area
+      $("#compose-message")[0].value = "";
+      self._currentRecipient = "";
+      $("#compose-controls").hide();
+      $("#compose-view").hide();
+      $("#inbox-view").show();
+    });
   },
 
   /////////////////////////////////////////////////////////////////////////////////
