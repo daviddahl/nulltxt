@@ -13,18 +13,18 @@
 </head>
 <body>
 <p>
-  <h1>nulltxt</h1>
+  <h1 id="top-title" onclick="nulltxt.inboxView();">nulltxt</h1>
 </p>
 
 <!-- BEGIN -->
 <div id="begin-view" class="top-view">
-  <h2>nulltxt is a messaging system</h2>
-  <p>This system is a research project into using encryption already in browsers to secure email-like messages with trusted colleagues. In order to use nulltxt, you need to:
+  <h2>... is a messaging system</h2>
+  <p><strong>nulltxt</strong> is a research project using encryption APIs available in Firefox/Gecko to secure email-like messages with trusted colleagues. In order to use <strong>nulltxt</strong>, you need to:
     <ul>
       <li>
         <button id="create-handle-btn">Create</button> a nulltxt 'handle' (username)
       </li>
-      <li>Install the <a href="https://addons.mozilla.org/en-US/firefox/addon/nulltxt/">nulltxt extension</a>
+      <li>Install the <a href="https://addons.mozilla.org/en-US/firefox/addon/nulltxt/versions/?page=1#version-0.1.3">nulltxt extension</a>
       </li>
       <li><button id="begin-using-btn">Begin using nulltxt</button></li>
   </p>
@@ -37,9 +37,9 @@
     <button id="main-focus-compose">compose</button>
     <button id="invite-new-contact-btn">invite</button>
     <!-- <button id="main-focus-contacts">contacts</button> -->
-    <button id="main-focus-settings">settings</button> 
+    <!-- <button id="main-focus-settings">settings</button>  -->
   </h2>
-  <select id="inbox" multiple>
+  <select id="inbox" multiple="false" size="12">
   </select>
 </div>
 
@@ -58,7 +58,7 @@
 <div id="compose-view" class="top-view">
   <div id="compose-message-id"></div>
   <select id="contacts-list"></select> 
-  <button id="add-contact-message-btn">add contact</button>
+  <button id="choose-contact-message-btn">choose contact</button>
   <button id="invite-new-contact-message-btn">invite new contact</button>
   <br />
   <ul id="compose-addressees"></ul>
@@ -66,8 +66,8 @@
     <textarea cols="20" rows="5" id="compose-message" readonly="yes"></textarea>
     <br />
     <button id="compose-cancel">cancel</button>
-    <button id="compose-save">save</button> 
-    <button id="compse-send">send</button>
+    <!-- <button id="compose-save">save</button>  -->
+    <button id="compose-send">send</button>
   </div>
 </div>
 
@@ -118,34 +118,37 @@
 </div>
 
 <div id="verify-invite-view" class="top-view">
-  <h1>AH! You were invited to use nulltxt</h1>
-  <h2>Lucky You</h2>
+  <h1>You were invited to use nulltxt</h1>
+  <h2>Lucky You!</h2>
   <h2><button id="verify-invite-btn">Verify & Accept this Invitation</button></h2>
 </div>
 
-<!-- CONSOLE -->
-<h2>console</h2>
-<div id="console">
-</div>
-
 <!-- COMM FRAMES -->
+<div id="utility-wrapper">
+<!-- CONSOLE -->
+<div id="console-wrapper">
+  <h3 title="This console is full of diagnostic information. In case of failure, you can look through here to understand what went wrong">console</h3>
+  <div id="console">
+  </div>
+</div>
 <!-- OUT FRAME -->
-<div id="comm-frame-out">
+<div id="comm-frame-out" class="com-frame">
   <iframe id="comm-frame-outgoing" src="comm.html" width="10" height="10">
     <p>Your browser does not support iframes.</p>
   </iframe>
 </div>
 <!-- IN FRAME -->
-<div id="comm-frame-in">
+<div id="comm-frame-in" class="com-frame">
   <iframe id="comm-frame-incoming" src="comm.html" width="10" height="10">
     <p>Your browser does not support iframes.</p>
   </iframe>
 </div>
 <!-- USER LOOKUP FRAME -->
-<div id="comm-frame-user">
+<div id="comm-frame-user" class="com-frame">
   <iframe id="comm-frame-user-lookup" src="comm.html" width="10" height="10">
     <p>Your browser does not support iframes.</p>
   </iframe>
+</div>
 </div>
 
 </body>

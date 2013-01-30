@@ -1,10 +1,10 @@
 body {
     font-family: "Arial","Helvetica",sans-serif;
-    font-size: 13px;
+    font-size: 1em;
     color: rgb(71, 71, 71);
 }
 
-select#inbox { width: 90%; height: 70%; font-size: 110%;} 
+select#inbox { width: 90%; font-size: 110%;} 
 div#read-msg { font-size: 15px; }
 
 #compose { width: 90%; height:80%; }
@@ -17,11 +17,20 @@ textarea#compose-message { width: 75%; height: 40%; }
            background-color: black;
            width: 90%;
            height: 100px;
-           overflow: scroll; }
+           overflow: scroll; 
+          }
 #console.console-error { color: red;  }
 #console.console-warn { color: orange;  }
 
+#utility-wrapper { width: 100%; position: absolute; bottom: 10px};
+
 #settings-list {   }
+#top-title { cursor: pointer;  }
+
+.com-frame { display: none; }
 
 h1 { font-size: 99%; }
 h2 { font-size: 90%;  }
+h3 { font-size: 80%; }
+
+li { margin-bottom: 5px; }

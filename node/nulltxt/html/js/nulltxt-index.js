@@ -58,6 +58,10 @@ $(document).ready(function (){
 
   nulltxt = new NullTxt(); // construct the app
 
+  window.onbeforeunload = function _beforeUnload(evt) {
+    nulltxt.sync();
+  };
+
   // UI tweaking
   $("#read-messages-view").hide();
   $("#compose-view").hide();
@@ -76,8 +80,9 @@ $(document).ready(function (){
     $("#contact-input")[0].focus();
   });
 
-  $("#add-contact-message-btn").click(function (evt) {
-    nulltxt.chooseContact();
+  $("#choose-contact-message-btn").click(function (evt) {
+    // nulltxt.chooseContact();
+    nulltxt.composeRun();
   });
 
   $("#invite-new-contact-message-btn").click(function (evt) {
@@ -156,9 +161,9 @@ $(document).ready(function (){
   $("#compose-send").click(function (evt){
     nulltxt.composeSend();
   });
-  $("#compose-save").click(function (evt){
-    nulltxt.composeSave();
-  });
+  // $("#compose-save").click(function (evt){
+  //   nulltxt.composeSave();
+  // });
 
   // double-click handler:
   $("#inbox").dblclick( function(evt){
@@ -167,7 +172,14 @@ $(document).ready(function (){
 
   // read message close operation
   $("#read-msg-close").click(function(evt){
+    $("#read-msg-decrypt")[0].disabled = false;
     nulltxt.closeMsg();
+  });
+
+  // Open decrypt UI
+  $("#read-msg-decrypt").click(function(evt){
+    this.disabled = true;
+    nulltxt.decryptMessage();
   });
 
   $("#verify-invite-view").hide();
@@ -200,6 +212,8 @@ $(document).ready(function (){
     log("No special operation to handle...");
   }
 
+  // load any messages in the inbox
+  nulltxt.loadInboxMessages();
 // END initialization of events
 });
 
@@ -279,11 +293,14 @@ function NullTxt(){
     this.console.warn("settings are null");
     this.init();
   }
-  else {
+  else if (!settings.handle){
     this._settings = JSON.parse(settings);
     this.console.log("settings are loaded");
-    if (this._settings.accountStatus == 2) {
+    if (this._settings.accountStatus == 4) {
       $("#begin-view").hide();
+    }
+    else {
+      $("#inbox-view").hide();
     }
   }
 }
@@ -428,6 +445,13 @@ NullTxt.prototype = {
     $("#comm-frame-incoming").load(aCallback);
   },
 
+  sync: function _sync()
+  {
+    log("sync()");
+    // onbeforeunload!
+    this.saveMessages();
+  },
+
   get settings() {
     // Settings are stored in localStorage
     // handle, incomingURL, outgoingURL, apiKey
@@ -556,26 +580,132 @@ NullTxt.prototype = {
     log("handleIncomingMessages()");
     for (var idx in msgs) {
       for (var prop in msgs[idx]) {
+        log("typeof msg: " + typeof msgs[idx][prop]);
         log(prop + ": " + msgs[idx][prop]);
       }
       console.log("a message: " +  msgs[idx]);
+      console.log(msgs[idx]);
       // XXX: use IndexedDB instead, can we push storage off onto a worker?
-      // JSON.parse failure here..................................................
+      // JSON.parse failure here.
+      log("msgs[idx][prop]...");
+      console.log(msgs[idx][prop]);
       var message = JSON.parse(msgs[idx].message);
-      localStorage.setItem("msg-" + msgs[idx]._id, JSON.stringify(msgs[idx]));
+      // localStorage.setItem("msg-" + msgs[idx]._id, JSON.stringify(msgs[idx]));
       // XXX: use data attributes for all attrs in each message
-      var msgFormat = '<option id=msg-' +
+      var _date = new Date(msgs[idx].recieved);
+      var msgFormat = '<option id=' +
                         msgs[idx]._id  +
                         '>' + "From: " +
                         msgs[idx].from +
-                        " Content: " +
-                        message.content +
+                        " Date/Time: " +
+                        _date +
                         '</option>';
         $("#inbox")[0].appendChild($(msgFormat)[0]);
         self.console.log("Received message " + msgs[idx]._id +
-                         " from " + msgs[idx].from);
+                         " from " + msgs[idx].from + " on " + _date);
         // XXX: set domain / path where we are getting this message from
+    }
+
+    this.saveIncomingMessages(msgs);
+
+  },
+
+  saveIncomingMessages: function saveIncomingMessages(aMsgs)
+  {
+    this._savingNow = true;
+    var saveNow = false;
+    if (!this._messages) {
+      this._messages = {};
+      saveNow = true;
+    }
+    if (!this._messageIdx) {
+      this._messageIdx = [];
+    }
+    if (!this._messagesLastSaved) {
+      this._messagesLastSaved = (Date.now() - 30000);
+    }
+    for (var idx in aMsgs) {
+      this._messages[aMsgs[idx]._id] = aMsgs[idx];
+      this._messageIdx.push(aMsgs[idx]._id);
+    }
+
+    if (!localStorage.getItem("messages")) {
+      localStorage.setItem("messages", "{}");
+      localStorage.setItem("messageIdx", "[]");
+    }
+    if (Date.now() < (this._messagesLastSaved + (30 * 1000))) {
+      localStorage.setItem("messages", JSON.stringify(this._messages));
+      localStorage.setItem("messageIdx", JSON.stringify(this._messageIdx));
+      this._messagesLastSaved = Date.now();
+    }
+    if (saveNow) {
+      this.saveMessages();
+    }
+    this._savingNow = false;
+  },
+
+  saveMessages: function saveMessages()
+  {
+    log("saveMessages()");
+    if (!this._savingNow) {
+      var index;
+      if (!this._messageIdx) {
+        index = [];
       }
+      else {
+        index = this._messageIdx;
+      }
+      if (typeof index == "object") {
+        localStorage.setItem("messages", JSON.stringify(this._messages));
+        localStorage.setItem("messageIdx", JSON.stringify(this._messageIdx));
+      }
+
+    }
+  },
+
+  loadInboxMessages: function loadInboxMessages()
+  {
+    log("loadInboxMessages()");
+    var _savedMessages = localStorage.getItem("messages");
+    var _index = localStorage.getItem("messageIdx");
+    if (_index == "undefined") {
+      _index = "[]";
+      localStorage.setItem("messageIdx", "[]");
+    }
+    if (_savedMessages == "undefined") {
+      _savedMessages = "{}";
+      localStorage.setItem("messages", "{}");
+    }
+    if (_index && (_index != "undefined") && _savedMessages && (_savedMessages != "undefined")) {
+      var savedMessages = JSON.parse(_savedMessages);
+      if (!(typeof savedMessages == "object")) {
+        this.console.error("ERROR: Cannot load messages from storage!!");
+        return; // fail!
+      }
+      console.log(savedMessages);
+      var index = JSON.parse(_index);
+      console.log(index);
+      for (var idx in index) {
+        console.log(idx);
+        var _idx = index[idx];
+        if (!savedMessages[_idx]) {
+          log("Saved Message not found!!!???");
+          continue;
+        }
+        var _date = new Date(savedMessages[_idx].recieved);
+        var msgFormat = '<option id=' +
+                        savedMessages[_idx]._id  +
+                        '>' + "From: " +
+                        savedMessages[_idx].from +
+                        " Date/Time: " +
+                        _date +
+                        '</option>';
+        $("#inbox")[0].appendChild($(msgFormat)[0]);
+      }
+      // set internal inbox cache
+      this._messages = savedMessages;
+      this._messageIdx = index;
+    }
   },
 
   _fetchMsgs: function idx_fetchMsgs()
@@ -687,7 +817,8 @@ NullTxt.prototype = {
   displayMsg: function displayMsg(aMsgID)
   {
     log("aMsgID", aMsgID);
-    var msg = JSON.parse(localStorage[aMsgID]);
+    // var msg = JSON.parse(localStorage[aMsgID]);
+    var msg = this._messages[aMsgID];
     console.log(msg);
     if (!msg) {
       console.error("Cannot get message from storage");
@@ -699,16 +830,46 @@ NullTxt.prototype = {
     var message = JSON.parse(msg.message);
     $("#read-msg-from")[0].innerHTML = msg.from;
     $("#read-msg-content").text(message.content);
-    this._currentMessageID = "msg-" + msg._id;
+    this._currentMessageID = msg._id;
   },
 
   decryptMessage: function decryptMessage()
   {
     if (this._currentMessageID) {
-      let message = localStorage.getItem(this._currentMessageID);
-      if (message) {
-        message = JSON.parse(message);
-        
+      // var metaMsg = localStorage.getItem(this._currentMessageID);
+      var metaMsg = this._messages[this._currentMessageID];
+      if (metaMsg) {
+        // metaMsg = JSON.parse(metaMsg);
+        console.log(metaMsg);
+        var msg = JSON.parse(metaMsg.message);
+        console.log(msg);
+        if (!msg) {
+          this.console.error("Cannot JSON parse current message");
+        }
+        else {
+          this._currentMessageID = null;
+          // call the nav.bridge API
+          function success()
+          {
+            if (this.result) {
+              console.log(this.result);
+              // message signature is verified
+              self.console.log("Message signature verified");
+            }
+          }
+          function error(err)
+          {
+            alert("Cannot verify and decrypt message: " + err);
+          }
+          cryptoRead(metaMsg.from,
+                     this.settings.keyID,
+                     msg,
+                     success,
+                     error);
+        }
+      }
+      else {
+        this.console.error("Cannot get message from storage");
       }
     }
   },
@@ -812,8 +973,9 @@ NullTxt.prototype = {
   {
     $("#invite-view").children().remove();
     $("#invite-view").hide();
-    this._revertToView.show();
     this._revertToView = $("#inbox-view");
+    this._revertToView.show();
+
   },
 
   verifyInvite: function verifyInvite()
@@ -869,6 +1031,7 @@ NullTxt.prototype = {
 
   checkAccountStatus: function checkAccountStatus()
   {
+    log("checkAccountStatus()");
     switch(this.settings.accountStatus)
     {
     case ACCT_STATUS_COMPLETE:
@@ -891,6 +1054,7 @@ NullTxt.prototype = {
 
   begin: function begin()
   {
+    log("begin()");
     $(".top-view").hide();
     $("#begin-view").show();
     $("#begin-using-btn")[0].disabled = true;
@@ -904,6 +1068,7 @@ NullTxt.prototype = {
 
   showComposeUI: function showComposeUI()
   {
+    this._currentViewID = "#compose-view";
     if (this._composing) {
       return;
     }
@@ -913,6 +1078,20 @@ NullTxt.prototype = {
     this._composing = true;
     // XXX: change this so we only call it when a contact is added or removed
     this.populateContacts();
+
+  },
+
+  composeRun: function composeRun()
+  {
+    try {
+      var recipient = $("#contacts-list")[0].firstChild.id;
+    }
+    catch (ex) {
+      alert("Error: No contacts found. You need to accept an invitation from a colleague in order to compose a message");
+      return;
+    }
+
+    // Make callbacks
     function success() {
       $("#compose-controls").show();
       $("#compose-message")[0].value = JSON.stringify(this.result);
@@ -922,7 +1101,6 @@ NullTxt.prototype = {
       console.log("Error: encryption failed.");
       // XXX: need to create a try again button, etc
     }
-    var recipient = $("#contacts-list")[0].firstChild.id;
     var recipientPubKey = nulltxt.contacts[recipient]["public-key"];
     cryptoWrite(recipientPubKey,
                 nulltxt.settings.keyID,
@@ -1055,7 +1233,7 @@ NullTxt.prototype = {
         self.console.log("Error: " + res.msg);
       }
       // XXX: Need a growl-like message here
-      alert("Message sent");
+      self.console.log("Message sent");
       // clear and hide compose area
       $("#compose-message")[0].value = "";
       self._currentRecipient = "";
@@ -1201,6 +1379,7 @@ NullTxt.prototype = {
         delete this._outBoxMsgs[aID];
         var idx = this._outBoxMsgs._index.indexOf(aID);
         if (idx) {
+          // XXX: fix this - got rid of Array.prototype.remove
           this._outBoxMsgs._index.remove(idx);
         }
       }
@@ -1351,7 +1530,10 @@ NullTxt.prototype = {
     return this._contacts;
   },
 
-
+  inboxView: function inboxView()
+  {
+    document.location = "/";
+  },
 
   /////////////////////////////////////////////////////////////////////////////////
   // CONSOLE
@@ -1435,11 +1617,11 @@ NullTxt.prototype = {
 };
 
 // Prototype extensions
-Array.prototype.remove = function(from, to) {
-  var rest = this.slice((to || from) + 1 || this.length);
-  this.length = from < 0 ? this.length + from : from;
-  return this.push.apply(this, rest);
-};
+// Array.prototype.remove = function(from, to) {
+//   var rest = this.slice((to || from) + 1 || this.length);
+//   this.length = from < 0 ? this.length + from : from;
+//   return this.push.apply(this, rest);
+// };
 
 ////////////////////////////////////////////////////////////////////////////////
 // Nulltxt Crypto functions
@@ -1476,15 +1658,12 @@ cryptoWrite(aPublicKey, aSenderKeyID, aRecipient, aSuccessCallback, aErrorCallba
 }
 
 function
-cryptoRead(aPublicKey, aSenderKeyID, aAuthorName, aSuccessCallback, aErrorCallback)
+cryptoRead(aAuthor, aRecipientKeyID, aCipherObject,  aSuccessCallback, aErrorCallback)
 {
-    var readCipherObject = {
-    type: "read",
-    format: "DER_BASE64",
-    authorName: aAuthorName,
-    publicKey: aPublicKey,
-    keyID: aSenderKeyID
-  };
+  var readCipherObject = aCipherObject;
+  readCipherObject.type = "read";
+  readCipherObject.authorName = aAuthor;
+  readCipherObject.keyID = aRecipientKeyID;
 
   var request = window.navigator.bridge.getCipherObject(readCipherObject);
 

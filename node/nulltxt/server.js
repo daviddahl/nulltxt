@@ -119,7 +119,13 @@ app.get("/msg/in/", function (req, res) {
       }
       if (result) {
         res.send(JSON.stringify({status: "success", msgs: result}));
-        // XXX: mark fetched messages as received - or - delete them
+        // delete all messages as we have already downloaded them
+        // XXX: lets flag all "fetched" messages in the future and remove them
+        // via a cron job
+        // log(result);
+        for (var idx in result) {
+          db["nulltxt.messages"].remove({_id: db.ObjectId(result[idx]._id.toString())}, 1);
+        }
       }
       else {
         // XXX: check for zero messages, which is not an error condition
