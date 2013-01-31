@@ -56,6 +56,16 @@ var nulltxt;
 $(document).ready(function (){
   console.log("document ready...");
 
+  $("#console-wrapper").hide();
+  $("#console-toggle-btn").toggle(
+    function () {
+      $("#console-wrapper").show();
+    },
+    function () {
+      $("#console-wrapper").hide();
+    }
+  );
+
   nulltxt = new NullTxt(); // construct the app
 
   window.onbeforeunload = function _beforeUnload(evt) {
@@ -592,22 +602,31 @@ NullTxt.prototype = {
       var message = JSON.parse(msgs[idx].message);
       // localStorage.setItem("msg-" + msgs[idx]._id, JSON.stringify(msgs[idx]));
       // XXX: use data attributes for all attrs in each message
-      var _date = new Date(msgs[idx].recieved);
-      var msgFormat = '<option id=' +
-                        msgs[idx]._id  +
-                        '>' + "From: " +
-                        msgs[idx].from +
-                        " Date/Time: " +
-                        _date +
-                        '</option>';
-        $("#inbox")[0].appendChild($(msgFormat)[0]);
-        self.console.log("Received message " + msgs[idx]._id +
-                         " from " + msgs[idx].from + " on " + _date);
-        // XXX: set domain / path where we are getting this message from
+      var msgFormat = this.formatMessage(msgs[idx]);
+      console.log(msgFormat);
+      $("#inbox")[0].appendChild($(msgFormat)[0]);
+      self.console.log("Received message " + msgs[idx]._id +
+                       " from " + msgs[idx].from);
+      // XXX: set domain / path where we are getting this message from
     }
-
     this.saveIncomingMessages(msgs);
+  },
 
+  formatMessage: function formatMessage(aMsg)
+  {
+    var _date = new Date(aMsg.recieved);
+    log(_date);
+    var msgFormat = '<option id=\'' +
+                      aMsg._id  +
+                      "'>" + "id: " +
+                      aMsg._id +
+                      " from: " +
+                      aMsg.from +
+                      "   date/time: " +
+                      _date +
+                      '</option>';
+    log(msgFormat);
+    return msgFormat;
   },
 
   saveIncomingMessages: function saveIncomingMessages(aMsgs)
@@ -621,8 +640,11 @@ NullTxt.prototype = {
     if (!this._messageIdx) {
       this._messageIdx = [];
     }
-    if (!this._messagesLastSaved) {
+    if (this._messagesLastSaved) {
       this._messagesLastSaved = (Date.now() - 30000);
+    }
+    else {
+      this._messagesLastSaved = (Date.now(0));
     }
     for (var idx in aMsgs) {
       this._messages[aMsgs[idx]._id] = aMsgs[idx];
@@ -633,7 +655,7 @@ NullTxt.prototype = {
       localStorage.setItem("messages", "{}");
       localStorage.setItem("messageIdx", "[]");
     }
-    if (Date.now() < (this._messagesLastSaved + (30 * 1000))) {
+    if (Date.now() > (this._messagesLastSaved + (30 * 1000))) {
       localStorage.setItem("messages", JSON.stringify(this._messages));
       localStorage.setItem("messageIdx", JSON.stringify(this._messageIdx));
       this._messagesLastSaved = Date.now();
@@ -659,7 +681,6 @@ NullTxt.prototype = {
         localStorage.setItem("messages", JSON.stringify(this._messages));
         localStorage.setItem("messageIdx", JSON.stringify(this._messageIdx));
       }
-
     }
   },
 
@@ -692,14 +713,8 @@ NullTxt.prototype = {
           log("Saved Message not found!!!???");
           continue;
         }
-        var _date = new Date(savedMessages[_idx].recieved);
-        var msgFormat = '<option id=' +
-                        savedMessages[_idx]._id  +
-                        '>' + "From: " +
-                        savedMessages[_idx].from +
-                        " Date/Time: " +
-                        _date +
-                        '</option>';
+
+        var msgFormat = this.formatMessage(savedMessages[_idx]);
         $("#inbox")[0].appendChild($(msgFormat)[0]);
       }
       // set internal inbox cache
@@ -830,7 +845,13 @@ NullTxt.prototype = {
     var message = JSON.parse(msg.message);
     $("#read-msg-from")[0].innerHTML = msg.from;
     $("#read-msg-content").text(message.content);
+    $("#read-msg-recieved").text(new Date(msg.recieved));
     this._currentMessageID = msg._id;
+  },
+
+  _displayMsg: function _displayMsg()
+  {
+
   },
 
   decryptMessage: function decryptMessage()

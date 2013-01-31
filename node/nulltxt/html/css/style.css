@@ -4,7 +4,7 @@ body {
     color: rgb(71, 71, 71);
 }
 
-select#inbox { width: 90%; font-size: 110%;} 
+select#inbox { width: 100%; font-size: 90%;} 
 div#read-msg { font-size: 15px; }
 
 #compose { width: 90%; height:80%; }
@@ -15,19 +15,24 @@ textarea#compose-message { width: 75%; height: 40%; }
            font-size: 12px; 
            color: green; 
            background-color: black;
-           width: 90%;
+           width: 100%;
            height: 100px;
            overflow: scroll; 
           }
 #console.console-error { color: red;  }
 #console.console-warn { color: orange;  }
 
-#utility-wrapper { width: 100%; position: absolute; bottom: 10px};
+#utility-wrapper { width: 100%; }
 
 #settings-list {   }
-#top-title { cursor: pointer;  }
+#top-title { cursor: pointer;  font-size: 180%; }
+#read-msg-content-wrapper { height: 100%; overflow: scroll; background-color: #0EB0B0 }
+#read-msg-content { margin: 1em; font-family: monospace; color: #B00E0E; font-size: 90%; }
+#console-toggle-btn { font-size: 60%; margin-top: 10em; }
 
 .com-frame { display: none; }
+.display-label { font-weight: bold; font-size: 90%;  }
+
 
 h1 { font-size: 99%; }
 h2 { font-size: 90%;  }

@@ -45,12 +45,25 @@
 
 <div id="read-messages-view" class="top-view">
   <div id="read-msg">
+    <h1>Incoming Message</h1>
+    <p>
+      <span class="display-label">Recieved:</span>
+      <span id="read-msg-recieved"></span>
+    </p>
+    <p>
+      <span class="display-label">From:</span>
+      <span id="read-msg-from"></span>
+    </p>
+    <p>
+      <span class="display-label" id="content-label">Encrypted Message Content</span>
+      <div id="read-msg-content-wrapper">
+        <pre id="read-msg-content"></pre>
+      </div>
+    </p>
     <h2 id="read-msg-toolbar">
-      From: <span id="read-msg-from"></span> 
-      <button id="read-msg-decrypt">Decrypt/Read</button>
+      <button id="read-msg-decrypt">Show Message</button>
       <button id="read-msg-close">Close</button>
     </h2>
-    <pre id="read-msg-content"></pre>
   </div>
 </div>
 
@@ -58,7 +71,7 @@
 <div id="compose-view" class="top-view">
   <div id="compose-message-id"></div>
   <select id="contacts-list"></select> 
-  <button id="choose-contact-message-btn">choose contact</button>
+  <button id="choose-contact-message-btn">choose contact</button> or 
   <button id="invite-new-contact-message-btn">invite new contact</button>
   <br />
   <ul id="compose-addressees"></ul>
@@ -125,9 +138,9 @@
 
 <!-- COMM FRAMES -->
 <div id="utility-wrapper">
+<button title="This console is full of diagnostic information. In case of failure, you can look through here to understand what went wrong" id="console-toggle-btn">toggle console</button>
 <!-- CONSOLE -->
 <div id="console-wrapper">
-  <h3 title="This console is full of diagnostic information. In case of failure, you can look through here to understand what went wrong">console</h3>
   <div id="console">
   </div>
 </div>
