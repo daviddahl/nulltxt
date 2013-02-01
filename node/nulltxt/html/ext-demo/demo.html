@@ -1,0 +1,157 @@
+<!doctype html>
+<head>
+  <meta charset="utf-8">
+  <title>nulltxt demo</title>
+  <meta name="description" content="nulltxt demo">
+  <meta name="viewport" 
+        content="width=device-width, initial-scale=1, maximum-scale=1">
+  <style>
+
+body {
+	margin: 0px;
+	padding: 10px;
+	background: #FFFFFF;
+	font-family: 'Abel', sans-serif;
+	font-size: 14px;
+	color: #969493;
+}
+
+h1, h2, h3 {
+	margin: 0;
+	padding: 0;
+	font-family: 'Abel', sans-serif;
+	font-weight: normal;
+	color: #000000;
+}
+
+h1 {
+	font-size: 2em;
+}
+
+h2 {
+	font-size: 1.6em;
+}
+
+h3 {
+	font-size: 1.4em;
+}
+
+h4 {
+  font-size: 0.9em;
+}
+
+p, ul, ol {
+	margin-top: 0;
+	line-height: 240%;
+}
+
+ul, ol {
+}
+
+a {
+	color: #474747;
+}
+
+div {
+  margin: 0.5em;
+}
+
+#raw-object {
+  font-size: 10px;
+}
+
+  </style>
+  <script src="jquery.js"></script>
+  <script src="nulltxt-demo.js"></script>
+  <link rel="stylesheet" href="default.min.css">
+  <script src="highlight.min.js"></script>
+  <script src="ready.js"></script>
+</head>
+<body>
+
+<h3 id="warning">In order to run this demo, you will need to install the <strong>nulltxt</strong> <a href="https://addons.mozilla.org/en-US/firefox/addon/nulltxt/versions/?page=1#version-0.1.3" target="_new">extension, version 0.1.3</a></h3>
+<p>
+  <h1><strong>nulltxt</strong>: using crypto 'near' the DOM</h1>
+</p>
+<p>
+  <h2>Step 1: Key generation</h2>
+  <p>
+    <h3>Example code</h3>
+    <pre>
+      <code>var request = window.navigator.bridge.getCipherObject({type: "keygen",format: "DER_BASE64"});
+request.onsuccess = function (){ */ this.result.publicKey is our key /* };
+request.onerror = function (error){};</code>
+    </pre>
+    <button id="keygen-btn">Generate an RSA Keypair</button> 
+  </p>
+  <div id="keygen"></div>
+</p>
+
+<div id="section-encrypt">
+  <h2>Step 2: Encryption</h2>
+  <p>
+    <h3>Example code</h3>
+  <pre><code>var writeCipherObject = {
+  type: "write",
+  format: "DER_BASE64",
+  recipientName: "drzhivago",
+  publicKey: window._pubKey,
+  keyID: window._keyID 
+};
+var request = window.navigator.bridge.getCipherObject(writeCipherObject);
+request.onsuccess = function (){ */ this.result is our 'cipher object' /* };
+request.onerror = function (error){};</code></pre>
+    <h3>Result</h3>
+    <div id="writebox"></div>
+  </p>
+  <p>
+    <h3>Signature</h3>
+    <div id="signature"></div>
+  </p>
+  <p>
+    <h3>Raw object</h3>
+    <a name="raw-object"></a>
+    <pre id="raw-object"></pre>
+  </p>
+  <p>
+    <p>(Message will be written in browser chrome UI)</p>
+    <button id="write-btn">Write Plain Text</button> 
+  </p>
+</div>
+
+<div id="section-decrypt">
+  <a name="decryption"></a>
+  <h2>Step 3: Decryption</h2>
+  <p>
+    <h3>Example code</h3>
+  <pre><code>var readCipherObject = window._cipherObj;
+readCipherObject.type = "read";
+readCipherObject.format = "DER_BASE64";
+readCipherObject.authorName = "drzhivago";
+readCipherObject.keyID = window._keyID;
+
+var request = window.navigator.bridge.getCipherObject(readCipherObject);
+request.onsuccess = function (){ */ this.result.verification contains the 'verification' boolean /* };
+request.onerror = function (error){};</code></pre>  
+    <p>(Message will be read in browser chrome UI)</p>
+    <h3>Signature Verified?</h3>
+    <div id="verified-signature"></div>
+  </p>
+  <p>
+    <a name="read-button"></a>
+    <button id="read-btn">Read Cipher Data</button> 
+  </p>
+</div>
+
+<div id="section-signature">
+  <h2>Signature & Verification</h2>
+  <h4>(Coming Soon)</h4>
+</div>
+
+<div id="section-hash">
+  <h2>Hash</h2>
+  <h4>(Coming Soon)</h4>
+</div>
+
+</body>
+</html>

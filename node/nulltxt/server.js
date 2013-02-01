@@ -6,23 +6,32 @@ function log(msg)
 var express = require('express')
   , https = require('https')
   , fs = require('fs')
-  , crypto = require('crypto');
+  , crypto = require('crypto')
+  , config = require('./config');
 
-var privateKey = fs.readFileSync('private-key.pem').toString();
-var certificate = fs.readFileSync('public-cert.pem').toString();
+// Let's get SSL working shall we?
+var privateKey = fs.readFileSync(config.privateKeyFile).toString();
+var certificate = fs.readFileSync(config.publicCertFile).toString();
 
 var options = {
   key : privateKey
-, cert : certificate
+  , cert : certificate
+};
+
+var ca = null;
+if (config.caFile) {
+  ca = fs.readFileSync(config.caFile).toString();
+  options.ca = ca;
 }
 
 var app = express();
-app.set("port", 8000);
+app.set("port", config.port);
 
 app.use(express.static(__dirname + '/html'));
 
 app.set('views', __dirname + '/html');
 app.engine('html', require('ejs').renderFile);
+app.engine('html/ext-demo', require('ejs').renderFile);
 app.use(express.bodyParser());
 
 // start server
@@ -44,11 +53,15 @@ var db = require("mongojs").connect(dbconn, collections);
 on the GET request of the root uri. */
 
 app.get('/comm.html', function(req, res) {
-    res.render('comm.html');
+  res.render('comm.html');
 });
 
 app.get('/', function(req, res) {
-    res.render('index.html');
+  res.render('index.html');
+});
+
+app.get('/ext-demo/demo.html', function (req, res) {
+  res.render('ext-demo/demo.html');
 });
 
 // REGISTER USER KEY/ACCT

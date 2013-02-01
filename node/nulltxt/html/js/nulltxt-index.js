@@ -1055,12 +1055,13 @@ NullTxt.prototype = {
     log("checkAccountStatus()");
     switch(this.settings.accountStatus)
     {
-    case ACCT_STATUS_COMPLETE:
-      return;
-    case ACCT_STATUS_HANDLE_ONLY:
+    case 4:
+      this.reload();
+      break;
+    case 3:
       // need to create a keypair // XXX: this seems unlikely
       break;
-    case ACCT_STATUS_BEGIN:
+    case 2:
       // need to create a server account and keys
       var handle = this._settings["handle"];
       if (!handle) {
