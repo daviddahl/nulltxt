@@ -1,4 +1,5 @@
-var NULLTXT_URL = "https://dev.nulltxt.se:8000";
+var NULLTXT_URL = window.location.protocol + "//" +  window.location.host;
+// "https://dev.nulltxt.se:8000";
 var RECV_MSGS_URL = "msg/in/";
 var SUCCESS = "success";
 var FAILURE = "failure";
@@ -49,6 +50,18 @@ function pprint(aObj, aRecurse)
   else {
     log((typeof aObj),": ", aObj);
   }
+}
+
+function wipeAccount()
+{
+  log("WIPING CLIENT SIDE ACCOUNT DATA");
+  window.onbeforeunload = null;
+  localStorage.clear();
+}
+
+function wipeServer()
+{
+  // TODO
 }
 
 var nulltxt;

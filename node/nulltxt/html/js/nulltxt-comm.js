@@ -1,4 +1,4 @@
-var NULLTXT_URL = "https://dev.nulltxt.se:8000";
+var NULLTXT_URL = window.location.protocol + "//" +  window.location.host;
 var MSG_STORE_URL = "msg/store/";
 var RECV_MSGS_URL = "msg/in/";
 var SEND_MSGS_URL = "msg/out/";
