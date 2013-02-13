@@ -1119,7 +1119,9 @@ NullTxt.prototype = {
   composeRun: function composeRun()
   {
     try {
-      var recipient = $("#contacts-list")[0].firstChild.id;
+      var select = $("#contacts-list")[0];
+      var recipient = select.childNodes.item(select.selectedIndex).value;
+      // var recipient = $("#contacts-list")[0].firstChild.id;
     }
     catch (ex) {
       alert("Error: No contacts found. You need to accept an invitation from a colleague in order to compose a message");
