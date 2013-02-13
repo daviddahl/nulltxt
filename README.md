@@ -5,6 +5,18 @@ node/mongodb server and JS frontend proof-of-concept application that consumes t
 
 This messaging system performs public key and message exchange between 2 users at a time.
 
+Requirements
+------------
+
+node.js
+MongoDB
+
+* node modules:
+ejs  
+express  
+jade  
+mongojs
+
 How nulltxt works
 -----------------
 
@@ -15,3 +27,12 @@ XXX TODO WTF
 
 nulltxt-extension: The signature is created but not verified on decrypt. P1 BUG!
   * I think it is a text-encoding issue.  
+
+Author
+------
+David Dahl <ddahl AT nulltxt DOT se>
+
+License
+-------
+Mozilla Public License
+https://www.mozilla.org/MPL/

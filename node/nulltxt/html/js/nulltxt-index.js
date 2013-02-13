@@ -1,3 +1,9 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Author: David Dahl <ddahl@nulltxt.se> */
+
 var NULLTXT_URL = window.location.protocol + "//" +  window.location.host;
 // "https://dev.nulltxt.se:8000";
 var RECV_MSGS_URL = "msg/in/";
