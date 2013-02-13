@@ -31,11 +31,15 @@ A server based on the tip of this repo is currently deployed here: https :// nul
 
 If it is not running, or you encounter bugs, please file an issue or ping the author on irc.mozilla.org (ddahl) 
 
+Things do not work end to end right now, there are some errors in the extension code and testing is a bit difficult to manage here - end to end. 
+
 XXX TODO WTF
 ------------
 
 nulltxt-extension: The signature is created but not verified on decrypt. P1 BUG!
-  * I think it is a text-encoding issue.  
+  * I think it is a text-encoding issue.
+
+nulltxt-extension: 'decrypt' does not always work. The reading widget will just close. Being debugged now.
 
 Author
 ------
