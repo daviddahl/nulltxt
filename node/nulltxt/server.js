@@ -46,7 +46,7 @@ https.createServer(options,app).listen(app.get('port'), function(){
 });
 
 var dbuser = "nulltxt";
-var passwd = "password";
+var passwd = config.dbPass;
 var host = "localhost";
 var port = "27017";
 var dbname = "nulltxt";
